@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generador de Turnos</title>
+  <style>
+    table, th, td {
+      border: 1px solid black;
+      border-collapse: collapse;
+      padding: 5px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Generador de Turnos</h1>
+  <button onclick="generarTurnos()">Generar Turnos</button>
+  <table id="turnosTable">
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Mañana</th>
+        <th>Jefes Mañana</th>
+        <th>Tarde</th>
+        <th>Jefes Tarde</th>
+        <th>Noche</th>
+        <th>Liberados</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Filas de turnos serán generadas aquí -->
+    </tbody>
+  </table>
+
+  <script>
+    const despachadores = [
+      'Esteban G', 'Ruth M', 'Omar M', 'Victor G', 'Claudio B', 'Victor M', 'Brayan C', 'Omar B',
+      'Isabel A', 'Jonathan M', 'Claudio C', 'Ricardo M', 'Javier C', 'Daniela V', 'Sebastian F'
+    ];
+
+    const jefesDeTurno = ['Fernando R', 'Ivan F', 'Hernan O', 'Luis C'];
+
+    function generarTurnos() {
+      const tableBody = document.getElementById('turnosTable').getElementsByTagName('tbody')[0];
+      tableBody.innerHTML = '';
+
+      let nocheCounter = {};
+      let nocheAssignedDates = {};
+      despachadores.forEach(empleado => {
+        nocheCounter[empleado] = 0;
+        nocheAssignedDates[empleado] = [];
+      });
+
+      const hoy = new Date();
+      for (let i = 0; i < 30; i++) {
+        const fecha = new Date(hoy);
+        fecha.setDate(hoy.getDate() + i);
+        const fechaStr = fecha.toISOString().split('T')[0];
+
+        let asignaciones = {
+          'mañana': [],
+          'jefe_mañana': [],
+          'tarde': [],
+          'jefe_tarde': [],
+          'noche': [],
+          'libre': []
+        };
+
+        asignaciones['mañana'] = getRandomEmployees(despachadores, 7);
+        asignaciones['jefe_mañana'] = getRandomEmployees(jefesDeTurno, 2);
+        asignaciones['tarde'] = getRandomEmployees(despachadores, 4, asignaciones['mañana']);
+        asignaciones['jefe_tarde'] = getRandomEmployees(jefesDeTurno, 1, asignaciones['tarde']);
+
+        const nightShiftEmployee = getNightShiftEmployee(despachadores, nocheCounter, nocheAssignedDates, fechaStr, asignaciones, i);
+        asignaciones['noche'] = [nightShiftEmployee];
+        nocheCounter[nightShiftEmployee]++;
+        nocheAssignedDates[nightShiftEmployee].push(fechaStr);
+
+        asignaciones = assignFreeDay(asignaciones, nightShiftEmployee, i);
+
+        const row = tableBody.insertRow();
+        row.insertCell(0).innerHTML = fechaStr;
+        row.insertCell(1).innerHTML = asignaciones['mañana'].join(', ');
+        row.insertCell(2).innerHTML = asignaciones['jefe_mañana'].join(', ');
+        row.insertCell(3).innerHTML = asignaciones['tarde'].join(', ');
+        row.insertCell(4).innerHTML = asignaciones['jefe_tarde'].join(', ');
+        row.insertCell(5).innerHTML = asignaciones['noche'].join(', ');
+        row.insertCell(6).innerHTML = asignaciones['libre'].join(', ');
+      }
+    }
+
+    function getRandomEmployees(empleados, cantidad, excluidos = []) {
+      let seleccionados = [];
+      while (seleccionados.length < cantidad) {
+        const randomIndex = Math.floor(Math.random() * empleados.length);
+        const empleado = empleados[randomIndex];
+        if (!seleccionados.includes(empleado) && !excluidos.includes(empleado)) {
+          seleccionados.push(empleado);
+        }
+      }
+      return seleccionados;
+    }
+
+    function getNightShiftEmployee(empleados, nocheCounter, nocheAssignedDates, fecha, asignaciones, rowIndex) {
+      const availableEmployees = empleados.filter(empleado => {
+        return nocheCounter[empleado] < 3 && 
+               !nocheAssignedDates[empleado].includes(fecha) &&
+               !asignaciones['mañana'].includes(empleado) &&
+               !asignaciones['tarde'].includes(empleado);
+      });
+
+      const selectedEmployee = availableEmployees[Math.floor(Math.random() * availableEmployees.length)];
+      const previousDates = nocheAssignedDates[selectedEmployee].slice(-2);
+      if (previousDates.length === 2 && previousDates.every(d => new Date(d).getDate() + 1 === new Date(fecha).getDate())) {
+        const nextDate = new Date(fecha);
+        nextDate.setDate(new Date(fecha).getDate() + 1);
+        nocheAssignedDates[selectedEmployee].push(nextDate.toISOString().split('T')[0]);
+      }
+
+      return selectedEmployee;
+    }
+
+    function assignFreeDay(asignaciones, employee, rowIndex) {
+      if (rowIndex >= 2) {
+        const previousDates = Object.keys(asignaciones).slice(rowIndex - 2, rowIndex + 1);
+        const nightCount = previousDates.filter(fecha => {
+          return asignaciones[fecha] && asignaciones[fecha]['noche'].includes(employee);
+        }).length;
+
+        if (nightCount === 3) {
+          const nextDate = new Date();
+          nextDate.setDate(nextDate.getDate() + 1);
+          asignaciones[nextDate.toISOString().split('T')[0]]['libre'].push(employee);
+        }
+      }
+      return asignaciones;
+    }
+  </script>
+</body>
+</html>
