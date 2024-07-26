@@ -90,6 +90,8 @@
         row.insertCell(5).innerHTML = asignaciones['noche'].join(', ');
         row.insertCell(6).innerHTML = asignaciones['libre'].join(', ');
       }
+
+      addEditableListeners();
     }
 
     function limpiarTurnos() {
@@ -142,6 +144,37 @@
         }
       }
       return asignaciones;
+    }
+
+    function addEditableListeners() {
+      const table = document.getElementById('turnosTable');
+      const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+
+      for (let i = 0; i < rows.length; i++) {
+        for (let j = 1; j < rows[i].cells.length; j++) {
+          rows[i].cells[j].contentEditable = "true";
+          rows[i].cells[j].addEventListener('input', function() {
+            updateCalendar(i, j, this.textContent);
+          });
+        }
+      }
+    }
+
+    function updateCalendar(rowIndex, colIndex, newValue) {
+      const table = document.getElementById('turnosTable');
+      const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+      const columnHeader = table.getElementsByTagName('thead')[0].getElementsByTagName('th')[colIndex].textContent.toLowerCase();
+
+      if (columnHeader.includes('mañana')) {
+        // Implement logic to update other days based on this change for morning shift
+      } else if (columnHeader.includes('tarde')) {
+        // Implement logic to update other days based on this change for afternoon shift
+      } else if (columnHeader.includes('noche')) {
+        // Implement logic to update other days based on this change for night shift
+      } else if (columnHeader.includes('liberados')) {
+        // Implement logic to update other days based on this change for free days
+      }
+      // Implement additional logic if necessary
     }
   </script>
 </body>
