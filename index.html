@@ -9,11 +9,15 @@
       padding: 5px;
       text-align: center;
     }
+    td[contenteditable="true"] {
+      background-color: #f9f9f9;
+    }
   </style>
 </head>
 <body>
   <h1>Generador de Turnos</h1>
   <button onclick="generarTurnos()">Generar Turnos</button>
+  <button onclick="limpiarTurnos()">Limpiar Turnos</button>
   <table id="turnosTable">
     <thead>
       <tr>
@@ -41,6 +45,7 @@
 
     function generarTurnos() {
       const tableBody = document.getElementById('turnosTable').getElementsByTagName('tbody')[0];
+      const hoy = new Date();
       tableBody.innerHTML = '';
 
       let nocheCounter = {};
@@ -50,7 +55,6 @@
         nocheAssignedDates[empleado] = [];
       });
 
-      const hoy = new Date();
       for (let i = 0; i < 30; i++) {
         const fecha = new Date(hoy);
         fecha.setDate(hoy.getDate() + i);
@@ -86,6 +90,11 @@
         row.insertCell(5).innerHTML = asignaciones['noche'].join(', ');
         row.insertCell(6).innerHTML = asignaciones['libre'].join(', ');
       }
+    }
+
+    function limpiarTurnos() {
+      const tableBody = document.getElementById('turnosTable').getElementsByTagName('tbody')[0];
+      tableBody.innerHTML = '';
     }
 
     function getRandomEmployees(empleados, cantidad, excluidos = []) {
