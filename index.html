@@ -37,6 +37,7 @@
         <thead>
             <tr>
                 <th>Trabajador</th>
+                <!-- Header cells for days will be added here dynamically -->
             </tr>
         </thead>
         <tbody id="shift-table-body">
@@ -45,26 +46,28 @@
     </table>
 
     <script>
-const despachadores = [
-    "Despachador 1",
-    "Despachador 2",
-    "Despachador 3",
-    "Despachador 4",
-    "Despachador 5",
-    "Despachador 6",
-    "Despachador 7",
-    "Despachador 8",
-    "Despachador 9",
-    "Despachador 10",
-    "Despachador 11",
-    "Despachador 12",
-    "Despachador 13",
-    "Despachador 14",
-    "Despachador 15"
-];
+        const despachadores = [
+            "Despachador 1",
+            "Despachador 2",
+            "Despachador 3",
+            "Despachador 4",
+            "Despachador 5",
+            "Despachador 6",
+            "Despachador 7",
+            "Despachador 8",
+            "Despachador 9",
+            "Despachador 10",
+            "Despachador 11",
+            "Despachador 12",
+            "Despachador 13",
+            "Despachador 14",
+            "Despachador 15"
+        ];
+
         const shiftManagers = [
             "JT1", "JT2", "JT3", "JT4"
         ];
+
         const totalDays = 31;
         const shiftTableBody = document.getElementById('shift-table-body');
 
@@ -77,7 +80,7 @@ const despachadores = [
                 headerRow.appendChild(th);
             }
 
-            const workers = [...dispatchers, ...shiftManagers];
+            const workers = [...despachadores, ...shiftManagers];
             workers.forEach(worker => {
                 const row = document.createElement('tr');
                 const workerCell = document.createElement('td');
@@ -140,7 +143,7 @@ const despachadores = [
 
         function assignShifts(day, shiftType, numDispatchers, numManagers) {
             const dayIndex = day - 1;
-            const dispatchersAssigned = getRandomElements(dispatchers, numDispatchers);
+            const dispatchersAssigned = getRandomElements(despachadores, numDispatchers);
             const managersAssigned = getRandomElements(shiftManagers, numManagers);
 
             dispatchersAssigned.forEach(dispatcher => {
@@ -158,7 +161,7 @@ const despachadores = [
         }
 
         function assignNightShift(startDay, currentNightShiftIndex) {
-            const dispatcher = dispatchers[currentNightShiftIndex];
+            const dispatcher = despachadores[currentNightShiftIndex];
             const preDaysOff = 2;
             const postDaysOff = 3;
 
@@ -191,7 +194,7 @@ const despachadores = [
             }
 
             currentNightShiftIndex++;
-            if (currentNightShiftIndex >= dispatchers.length) {
+            if (currentNightShiftIndex >= despachadores.length) {
                 currentNightShiftIndex = 0;
             }
             return currentNightShiftIndex;
@@ -208,7 +211,7 @@ const despachadores = [
         }
 
         function ensureWorkDays() {
-            dispatchers.forEach(dispatcher => {
+            despachadores.forEach(dispatcher => {
                 const workDays = Array.from(shiftTableBody.children)
                     .find(row => row.children[0].textContent === dispatcher)
                     .querySelectorAll('select')
