@@ -205,8 +205,7 @@
         }
 
         function intelligentAssignment() {
-            clearShifts();
-
+            // No limpiar los turnos, para considerar las asignaciones manuales
             // Obtener nombres actualizados de los trabajadores
             const workers = Array.from(shiftTableBody.children).map(row => row.children[0].querySelector('input').value);
 
@@ -214,10 +213,18 @@
             const updatedDespachadores = workers.slice(0, defaultDespachadores.length);
             const updatedShiftManagers = workers.slice(defaultDespachadores.length);
 
-            // Inicializar disponibilidad
+            // Inicializar disponibilidad considerando asignaciones previas y bloqueos
             let workerAvailability = {};
             workers.forEach(worker => {
-                workerAvailability[worker] = new Array(totalDays).fill(true);
+                workerAvailability[worker] = [];
+                for (let dayIndex = 0; dayIndex < totalDays; dayIndex++) {
+                    const select = getSelectElement(worker, dayIndex);
+                    if (select && (select.value !== 'L' || select.classList.contains('blocked'))) {
+                        workerAvailability[worker][dayIndex] = false; // No disponible si ya tiene turno asignado o está bloqueado
+                    } else {
+                        workerAvailability[worker][dayIndex] = true;
+                    }
+                }
             });
 
             // Asignación de turnos de noche
@@ -225,31 +232,56 @@
             let dayIndex = 0;
 
             while (dayIndex < totalDays) {
-                const dispatcher = updatedDespachadores[nightShiftIndex];
+                let dispatcherAssigned = false;
+                let attempts = 0;
+                while (!dispatcherAssigned && attempts < updatedDespachadores.length) {
+                    const dispatcher = updatedDespachadores[nightShiftIndex];
 
-                // Día libre antes del turno de noche
-                if (dayIndex < totalDays && !isBlocked(dispatcher, dayIndex)) {
-                    setShift(dispatcher, dayIndex, 'L', workerAvailability);
-                    dayIndex++;
-                }
-
-                // Asignar 3 noches consecutivas
-                for (let i = 0; i < 3 && dayIndex < totalDays; i++) {
-                    if (!isBlocked(dispatcher, dayIndex)) {
-                        setShift(dispatcher, dayIndex, 'N', workerAvailability);
+                    // Verificar disponibilidad para el ciclo completo
+                    let canAssign = true;
+                    for (let i = 0; i < 6 && (dayIndex + i) < totalDays; i++) {
+                        if (!workerAvailability[dispatcher][dayIndex + i]) {
+                            canAssign = false;
+                            break;
+                        }
                     }
-                    dayIndex++;
-                }
 
-                // Días libres después del turno de noche
-                for (let i = 0; i < 2 && dayIndex < totalDays; i++) {
-                    if (!isBlocked(dispatcher, dayIndex)) {
-                        setShift(dispatcher, dayIndex, 'L', workerAvailability);
+                    if (canAssign) {
+                        // Día libre antes del turno de noche
+                        if (workerAvailability[dispatcher][dayIndex]) {
+                            setShift(dispatcher, dayIndex, 'L', workerAvailability);
+                        }
+                        dayIndex++;
+
+                        // Asignar 3 noches consecutivas
+                        for (let i = 0; i < 3 && dayIndex < totalDays; i++) {
+                            if (workerAvailability[dispatcher][dayIndex]) {
+                                setShift(dispatcher, dayIndex, 'N', workerAvailability);
+                            }
+                            dayIndex++;
+                        }
+
+                        // Días libres después del turno de noche
+                        for (let i = 0; i < 2 && dayIndex < totalDays; i++) {
+                            if (workerAvailability[dispatcher][dayIndex]) {
+                                setShift(dispatcher, dayIndex, 'L', workerAvailability);
+                            }
+                            dayIndex++;
+                        }
+
+                        dispatcherAssigned = true;
+                        nightShiftIndex = (nightShiftIndex + 1) % updatedDespachadores.length;
+                    } else {
+                        // Mover al siguiente despachador
+                        nightShiftIndex = (nightShiftIndex + 1) % updatedDespachadores.length;
+                        attempts++;
                     }
-                    dayIndex++;
                 }
 
-                nightShiftIndex = (nightShiftIndex + 1) % updatedDespachadores.length;
+                if (!dispatcherAssigned) {
+                    // No se pudo asignar el turno de noche, avanzar al siguiente día
+                    dayIndex++;
+                }
             }
 
             // Asegurar que siempre haya un despachador en el turno de noche
@@ -262,7 +294,7 @@
                 if (assignedDispatchers.length === 0) {
                     // Asignar el turno de noche a un despachador disponible
                     const availableDispatchers = updatedDespachadores.filter(worker => {
-                        return workerAvailability[worker][i] && !isBlocked(worker, i);
+                        return workerAvailability[worker][i];
                     });
 
                     if (availableDispatchers.length > 0) {
@@ -285,7 +317,7 @@
 
         function setShift(worker, dayIndex, shiftType, workerAvailability) {
             const select = getSelectElement(worker, dayIndex);
-            if (select && !select.classList.contains('blocked')) {
+            if (select && workerAvailability[worker][dayIndex]) {
                 select.value = shiftType;
                 workerAvailability[worker][dayIndex] = false;
             }
@@ -297,9 +329,9 @@
         }
 
         function assignShifts(dayIndex, shiftType, numDispatchers, numManagers, workerAvailability, dispatchers, managers) {
-            const availableDispatchers = dispatchers.filter(worker => workerAvailability[worker][dayIndex] && !isBlocked(worker, dayIndex) && getSelectElement(worker, dayIndex).value === 'L');
+            const availableDispatchers = dispatchers.filter(worker => workerAvailability[worker][dayIndex]);
             const dispatchersAssigned = getRandomElements(availableDispatchers, Math.min(numDispatchers, availableDispatchers.length));
-            const availableManagers = managers.filter(worker => workerAvailability[worker][dayIndex] && !isBlocked(worker, dayIndex) && getSelectElement(worker, dayIndex).value === 'L');
+            const availableManagers = managers.filter(worker => workerAvailability[worker][dayIndex]);
             const managersAssigned = getRandomElements(availableManagers, Math.min(numManagers, availableManagers.length));
 
             dispatchersAssigned.forEach(worker => {
@@ -336,7 +368,7 @@
                 if (daysNeeded > 0) {
                     for (let dayIndex = 0; dayIndex < totalDays && daysNeeded > 0; dayIndex++) {
                         const select = selects[dayIndex];
-                        if (workerAvailability[worker][dayIndex] && select.value === 'L' && !select.classList.contains('blocked')) {
+                        if (workerAvailability[worker][dayIndex]) {
                             setShift(worker, dayIndex, 'M', workerAvailability);
                             daysNeeded--;
                         }
@@ -355,5 +387,8 @@
         document.getElementById('year').addEventListener('change', createTable);
         document.getElementById('twoMonths').addEventListener('change', createTable);
     </script>
+</body>
+</html>
+
 </body>
 </html>
