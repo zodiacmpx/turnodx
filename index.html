@@ -32,7 +32,7 @@
     </style>
 </head>
 <body>
-    <h1>Generador de Turnos</h1>
+    <h1>Generador de Turnos DX</h1>
     <div class="month-year-select">
         <label for="month">Mes:</label>
         <select id="month">
@@ -88,6 +88,7 @@
 
         let totalDays = 31;
         let shiftTableBody = document.getElementById('shift-table-body');
+        let daysArray = [];
 
         function populateMonthYearSelectors() {
             const monthSelect = document.getElementById('month');
@@ -130,7 +131,7 @@
             const selectedMonth = parseInt(monthSelect.value);
             const selectedYear = parseInt(yearSelect.value);
 
-            const daysArray = [];
+            daysArray = [];
             let date = new Date(selectedYear, selectedMonth, 1);
 
             // Obtener los días del mes seleccionado y, opcionalmente, del mes siguiente
@@ -205,7 +206,6 @@
         }
 
         function intelligentAssignment() {
-            // No limpiar los turnos, para considerar las asignaciones manuales
             // Obtener nombres actualizados de los trabajadores
             const workers = Array.from(shiftTableBody.children).map(row => row.children[0].querySelector('input').value);
 
@@ -227,6 +227,9 @@
                 }
             });
 
+            // Reiniciar asignaciones aleatorias para asegurar resultados diferentes en cada ejecución
+            const randomSeed = Math.random();
+
             // Asignación de turnos de noche
             let nightShiftIndex = 0;
             let dayIndex = 0;
@@ -234,8 +237,10 @@
             while (dayIndex < totalDays) {
                 let dispatcherAssigned = false;
                 let attempts = 0;
-                while (!dispatcherAssigned && attempts < updatedDespachadores.length) {
-                    const dispatcher = updatedDespachadores[nightShiftIndex];
+                const dispatcherOrder = shuffleArray(updatedDespachadores.slice(), randomSeed + dayIndex);
+
+                while (!dispatcherAssigned && attempts < dispatcherOrder.length) {
+                    const dispatcher = dispatcherOrder[nightShiftIndex % dispatcherOrder.length];
 
                     // Verificar disponibilidad para el ciclo completo
                     let canAssign = true;
@@ -270,10 +275,10 @@
                         }
 
                         dispatcherAssigned = true;
-                        nightShiftIndex = (nightShiftIndex + 1) % updatedDespachadores.length;
+                        nightShiftIndex++;
                     } else {
                         // Mover al siguiente despachador
-                        nightShiftIndex = (nightShiftIndex + 1) % updatedDespachadores.length;
+                        nightShiftIndex++;
                         attempts++;
                     }
                 }
@@ -308,8 +313,8 @@
 
             // Asignación de turnos de mañana y tarde
             for (let dayIndex = 0; dayIndex < totalDays; dayIndex++) {
-                assignShifts(dayIndex, "M", 7, 2, workerAvailability, updatedDespachadores, updatedShiftManagers);
-                assignShifts(dayIndex, "T", 4, 1, workerAvailability, updatedDespachadores, updatedShiftManagers);
+                assignShifts(dayIndex, "M", 7, 2, workerAvailability, updatedDespachadores, updatedShiftManagers, randomSeed + dayIndex);
+                assignShifts(dayIndex, "T", 4, 1, workerAvailability, updatedDespachadores, updatedShiftManagers, randomSeed + dayIndex + 1000);
             }
 
             ensureWorkDays(workerAvailability, workers);
@@ -328,11 +333,11 @@
             return select && select.classList.contains('blocked');
         }
 
-        function assignShifts(dayIndex, shiftType, numDispatchers, numManagers, workerAvailability, dispatchers, managers) {
+        function assignShifts(dayIndex, shiftType, numDispatchers, numManagers, workerAvailability, dispatchers, managers, seed) {
             const availableDispatchers = dispatchers.filter(worker => workerAvailability[worker][dayIndex]);
-            const dispatchersAssigned = getRandomElements(availableDispatchers, Math.min(numDispatchers, availableDispatchers.length));
+            const dispatchersAssigned = getRandomElements(availableDispatchers, Math.min(numDispatchers, availableDispatchers.length), seed);
             const availableManagers = managers.filter(worker => workerAvailability[worker][dayIndex]);
-            const managersAssigned = getRandomElements(availableManagers, Math.min(numManagers, availableManagers.length));
+            const managersAssigned = getRandomElements(availableManagers, Math.min(numManagers, availableManagers.length), seed + 500);
 
             dispatchersAssigned.forEach(worker => {
                 setShift(worker, dayIndex, shiftType, workerAvailability);
@@ -348,9 +353,29 @@
             return row ? row.children[dayIndex + 1].querySelector('select') : null;
         }
 
-        function getRandomElements(array, numElements) {
-            const shuffled = array.slice().sort(() => 0.5 - Math.random());
+        function getRandomElements(array, numElements, seed) {
+            const shuffled = shuffleArray(array.slice(), seed);
             return shuffled.slice(0, numElements);
+        }
+
+        function shuffleArray(array, seed) {
+            let currentIndex = array.length, temporaryValue, randomIndex;
+
+            while (0 !== currentIndex) {
+                randomIndex = Math.floor(random(seed++) * currentIndex);
+                currentIndex -= 1;
+
+                temporaryValue = array[currentIndex];
+                array[currentIndex] = array[randomIndex];
+                array[randomIndex] = temporaryValue;
+            }
+
+            return array;
+        }
+
+        function random(seed) {
+            const x = Math.sin(seed) * 10000;
+            return x - Math.floor(x);
         }
 
         function ensureWorkDays(workerAvailability, workers) {
