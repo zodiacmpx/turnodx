@@ -2,28 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shift Scheduler</title>
+    <title>Generador de Turnos Inteligente</title>
     <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            border: 1px solid #000;
-            text-align: center;
-            padding: 8px;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        .header-buttons {
-            margin-bottom: 20px;
-        }
-        .blocked {
-            background-color: #f00;
-            color: #fff;
-        }
+        /* ... estilos CSS ... */
     </style>
 </head>
 <body>
@@ -37,11 +18,11 @@
         <thead>
             <tr>
                 <th>Trabajador</th>
-                <!-- Header cells for days will be added here dynamically -->
+                <!-- Celdas de encabezado para los días -->
             </tr>
         </thead>
         <tbody id="shift-table-body">
-            <!-- Rows will be populated by JavaScript -->
+            <!-- Filas generadas dinámicamente -->
         </tbody>
     </table>
 
@@ -72,7 +53,7 @@
         const shiftTableBody = document.getElementById('shift-table-body');
 
         function createTable() {
-            // Create header dynamically
+            // Crear encabezado dinámicamente
             const headerRow = document.querySelector('thead tr');
             for (let i = 1; i <= totalDays; i++) {
                 const th = document.createElement('th');
@@ -127,29 +108,43 @@
 
         function intelligentAssignment() {
             clearShifts();
+
+            // Inicializar disponibilidad
+            let dispatcherAvailability = {};
+            despachadores.forEach(dispatcher => {
+                dispatcherAvailability[dispatcher] = new Array(totalDays).fill(true);
+            });
+
+            const nightShiftStartDays = [1, 7, 13, 19, 25]; // Días de inicio para turnos de noche
             let nightShiftIndex = 0;
 
             for (let day = 1; day <= totalDays; day++) {
-                assignShifts(day, "M", 7, 2); // Morning shifts
-                assignShifts(day, "T", 4, 1); // Afternoon shifts
+                const dayIndex = day - 1;
 
-                if (day % 7 === 1) {
-                    nightShiftIndex = assignNightShift(day, nightShiftIndex);
+                // Asignar turnos de mañana y tarde
+                assignShifts(day, "M", 7, 2, dispatcherAvailability);
+                assignShifts(day, "T", 4, 1, dispatcherAvailability);
+
+                // Asignar turno de noche
+                if (nightShiftStartDays.includes(day)) {
+                    nightShiftIndex = assignNightShift(day, nightShiftIndex, dispatcherAvailability);
                 }
             }
 
-            ensureWorkDays();
+            ensureWorkDays(dispatcherAvailability);
         }
 
-        function assignShifts(day, shiftType, numDispatchers, numManagers) {
+        function assignShifts(day, shiftType, numDispatchers, numManagers, dispatcherAvailability) {
             const dayIndex = day - 1;
-            const dispatchersAssigned = getRandomElements(despachadores, numDispatchers);
+            const availableDispatchers = despachadores.filter(dispatcher => dispatcherAvailability[dispatcher][dayIndex]);
+            const dispatchersAssigned = getRandomElements(availableDispatchers, Math.min(numDispatchers, availableDispatchers.length));
             const managersAssigned = getRandomElements(shiftManagers, numManagers);
 
             dispatchersAssigned.forEach(dispatcher => {
                 const select = getSelectElement(dispatcher, dayIndex);
                 if (select && !select.classList.contains('blocked')) {
                     select.value = shiftType;
+                    dispatcherAvailability[dispatcher][dayIndex] = false;
                 }
             });
             managersAssigned.forEach(manager => {
@@ -160,43 +155,45 @@
             });
         }
 
-        function assignNightShift(startDay, currentNightShiftIndex) {
+        function assignNightShift(startDay, currentNightShiftIndex, dispatcherAvailability) {
             const dispatcher = despachadores[currentNightShiftIndex];
-            const preDaysOff = 2;
-            const postDaysOff = 3;
+            const preDaysOff = 1;
+            const nightShiftDays = 3;
+            const postDaysOff = 2;
 
-            // Assign days off before the night shift
-            for (let i = 0; i < preDaysOff; i++) {
-                if ((startDay - preDaysOff + i) >= 1) {
-                    const select = getSelectElement(dispatcher, startDay - preDaysOff + i - 1);
-                    if (select && !select.classList.contains('blocked')) {
-                        select.value = 'L';
-                    }
+            // Día libre antes del turno de noche
+            let dayIndex = startDay - 1 - preDaysOff;
+            if (dayIndex >= 0) {
+                const select = getSelectElement(dispatcher, dayIndex);
+                if (select && !select.classList.contains('blocked')) {
+                    select.value = 'L';
+                    dispatcherAvailability[dispatcher][dayIndex] = false;
                 }
             }
 
-            // Assign night shift
-            for (let i = 0; i < 1 && (startDay + i) <= totalDays; i++) {
-                const select = getSelectElement(dispatcher, startDay + i - 1);
+            // Asignar turnos de noche
+            for (let i = 0; i < nightShiftDays && (startDay + i) <= totalDays; i++) {
+                dayIndex = startDay + i - 1;
+                const select = getSelectElement(dispatcher, dayIndex);
                 if (select && !select.classList.contains('blocked')) {
                     select.value = "N";
+                    dispatcherAvailability[dispatcher][dayIndex] = false;
                 }
             }
 
-            // Assign days off after the night shift
+            // Días libres después del turno de noche
             for (let i = 0; i < postDaysOff; i++) {
-                if ((startDay + 1 + i) <= totalDays) {
-                    const select = getSelectElement(dispatcher, startDay + 1 + i - 1);
+                dayIndex = startDay + nightShiftDays + i - 1;
+                if (dayIndex < totalDays) {
+                    const select = getSelectElement(dispatcher, dayIndex);
                     if (select && !select.classList.contains('blocked')) {
                         select.value = 'L';
+                        dispatcherAvailability[dispatcher][dayIndex] = false;
                     }
                 }
             }
 
-            currentNightShiftIndex++;
-            if (currentNightShiftIndex >= despachadores.length) {
-                currentNightShiftIndex = 0;
-            }
+            currentNightShiftIndex = (currentNightShiftIndex + 1) % despachadores.length;
             return currentNightShiftIndex;
         }
 
@@ -210,43 +207,48 @@
             return shuffled.slice(0, numElements);
         }
 
-        function ensureWorkDays() {
+        function ensureWorkDays(dispatcherAvailability) {
             despachadores.forEach(dispatcher => {
-                const workDays = Array.from(shiftTableBody.children)
-                    .find(row => row.children[0].textContent === dispatcher)
-                    .querySelectorAll('select')
-                    .filter(select => select.value !== 'L' && !select.classList.contains('blocked')).length;
+                const row = Array.from(shiftTableBody.children).find(row => row.children[0].textContent === dispatcher);
+                const selects = row.querySelectorAll('select');
+                let workDays = 0;
+                selects.forEach((select, dayIndex) => {
+                    if (select.value !== 'L' && !select.classList.contains('blocked')) {
+                        workDays++;
+                    }
+                });
 
-                const daysNeeded = 20 - workDays;
+                let daysNeeded = 20 - workDays;
                 if (daysNeeded > 0) {
-                    let day = 1;
-                    while (day <= totalDays && daysNeeded > 0) {
-                        const select = getSelectElement(dispatcher, day - 1);
-                        if (select && select.value === 'L' && !select.classList.contains('blocked')) {
-                            select.value = 'M'; // Default to morning shift
+                    for (let dayIndex = 0; dayIndex < totalDays && daysNeeded > 0; dayIndex++) {
+                        const select = selects[dayIndex];
+                        if (dispatcherAvailability[dispatcher][dayIndex] && select.value === 'L' && !select.classList.contains('blocked')) {
+                            select.value = 'M'; // Asignar turno de mañana por defecto
+                            dispatcherAvailability[dispatcher][dayIndex] = false;
                             daysNeeded--;
                         }
-                        day++;
                     }
                 }
             });
 
             shiftManagers.forEach(manager => {
-                const workDays = Array.from(shiftTableBody.children)
-                    .find(row => row.children[0].textContent === manager)
-                    .querySelectorAll('select')
-                    .filter(select => select.value !== 'L' && !select.classList.contains('blocked')).length;
+                const row = Array.from(shiftTableBody.children).find(row => row.children[0].textContent === manager);
+                const selects = row.querySelectorAll('select');
+                let workDays = 0;
+                selects.forEach(select => {
+                    if (select.value !== 'L' && !select.classList.contains('blocked')) {
+                        workDays++;
+                    }
+                });
 
-                const daysNeeded = 20 - workDays;
+                let daysNeeded = 20 - workDays;
                 if (daysNeeded > 0) {
-                    let day = 1;
-                    while (day <= totalDays && daysNeeded > 0) {
-                        const select = getSelectElement(manager, day - 1);
-                        if (select && select.value === 'L' && !select.classList.contains('blocked')) {
-                            select.value = 'M'; // Default to morning shift
+                    for (let dayIndex = 0; dayIndex < totalDays && daysNeeded > 0; dayIndex++) {
+                        const select = selects[dayIndex];
+                        if (select.value === 'L' && !select.classList.contains('blocked')) {
+                            select.value = 'M'; // Asignar turno de mañana por defecto
                             daysNeeded--;
                         }
-                        day++;
                     }
                 }
             });
