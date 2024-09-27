@@ -4,19 +4,56 @@
     <meta charset="UTF-8">
     <title>Generador de Turnos Inteligente</title>
     <style>
-        /* ... estilos CSS ... */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #000;
+            text-align: center;
+            padding: 4px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .header-buttons {
+            margin-bottom: 10px;
+        }
+        .blocked {
+            background-color: #f00;
+            color: #fff;
+        }
+        input.worker-name {
+            width: 100px;
+        }
+        .month-year-select {
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
     <h1>Generador de Turnos</h1>
+    <div class="month-year-select">
+        <label for="month">Mes:</label>
+        <select id="month">
+            <!-- Opciones de meses -->
+        </select>
+        <label for="year">Año:</label>
+        <select id="year">
+            <!-- Opciones de años -->
+        </select>
+        <label>
+            <input type="checkbox" id="twoMonths">
+            Generar para dos meses
+        </label>
+    </div>
     <div class="header-buttons">
-        <button onclick="generateShifts()">Generar Turnos</button>
         <button onclick="intelligentAssignment()">Asignación Inteligente</button>
         <button onclick="clearShifts()">Limpiar Turnos</button>
     </div>
     <table>
         <thead>
-            <tr>
+            <tr id="header-row">
                 <th>Trabajador</th>
                 <!-- Celdas de encabezado para los días -->
             </tr>
@@ -49,26 +86,87 @@
             "JT1", "JT2", "JT3", "JT4"
         ];
 
-        const totalDays = 31;
-        const shiftTableBody = document.getElementById('shift-table-body');
+        let totalDays = 31;
+        let shiftTableBody = document.getElementById('shift-table-body');
+
+        function populateMonthYearSelectors() {
+            const monthSelect = document.getElementById('month');
+            const yearSelect = document.getElementById('year');
+            const currentYear = new Date().getFullYear();
+
+            const months = [
+                "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+            ];
+
+            months.forEach((month, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = month;
+                monthSelect.appendChild(option);
+            });
+
+            for (let year = currentYear; year <= currentYear + 1; year++) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            }
+        }
 
         function createTable() {
-            // Crear encabezado dinámicamente
-            const headerRow = document.querySelector('thead tr');
-            for (let i = 1; i <= totalDays; i++) {
-                const th = document.createElement('th');
-                th.textContent = i;
-                headerRow.appendChild(th);
+            // Limpiar la tabla si ya existe
+            document.getElementById('header-row').innerHTML = '<th>Trabajador</th>';
+            shiftTableBody.innerHTML = '';
+
+            const monthSelect = document.getElementById('month');
+            const yearSelect = document.getElementById('year');
+            const twoMonths = document.getElementById('twoMonths').checked;
+
+            const selectedMonth = parseInt(monthSelect.value);
+            const selectedYear = parseInt(yearSelect.value);
+
+            const date = new Date(selectedYear, selectedMonth, 1);
+            const daysInMonth = new Date(selectedYear, selectedMonth + 1, 0).getDate();
+            totalDays = daysInMonth;
+
+            let daysArray = [];
+            for (let i = 1; i <= daysInMonth; i++) {
+                daysArray.push({ day: i, month: selectedMonth, year: selectedYear });
             }
 
+            if (twoMonths) {
+                const nextMonth = (selectedMonth + 1) % 12;
+                const nextYear = selectedMonth === 11 ? selectedYear + 1 : selectedYear;
+                const daysInNextMonth = new Date(nextYear, nextMonth + 1, 0).getDate();
+
+                for (let i = 1; i <= daysInNextMonth; i++) {
+                    daysArray.push({ day: i, month: nextMonth, year: nextYear });
+                }
+                totalDays += daysInNextMonth;
+            }
+
+            // Crear encabezado dinámicamente
+            const headerRow = document.getElementById('header-row');
+            daysArray.forEach(dateObj => {
+                const th = document.createElement('th');
+                th.textContent = `${dateObj.day}/${dateObj.month + 1}`;
+                headerRow.appendChild(th);
+            });
+
             const workers = [...despachadores, ...shiftManagers];
-            workers.forEach(worker => {
+            workers.forEach((worker, index) => {
                 const row = document.createElement('tr');
                 const workerCell = document.createElement('td');
-                workerCell.textContent = worker;
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'worker-name';
+                input.value = worker;
+                workerCell.appendChild(input);
                 row.appendChild(workerCell);
 
-                for (let i = 1; i <= totalDays; i++) {
+                for (let i = 0; i < totalDays; i++) {
                     const dayCell = document.createElement('td');
                     const select = document.createElement('select');
                     select.oncontextmenu = (event) => {
@@ -109,96 +207,90 @@
         function intelligentAssignment() {
             clearShifts();
 
+            // Obtener nombres actualizados de los trabajadores
+            const workers = Array.from(shiftTableBody.children).map(row => row.children[0].querySelector('input').value);
+
+            // Separar despachadores y jefes de turno
+            const updatedDespachadores = workers.slice(0, despachadores.length);
+            const updatedShiftManagers = workers.slice(despachadores.length);
+
             // Inicializar disponibilidad
-            let dispatcherAvailability = {};
-            despachadores.forEach(dispatcher => {
-                dispatcherAvailability[dispatcher] = new Array(totalDays).fill(true);
+            let workerAvailability = {};
+            workers.forEach(worker => {
+                workerAvailability[worker] = new Array(totalDays).fill(true);
             });
 
-            const nightShiftStartDays = [1, 7, 13, 19, 25]; // Días de inicio para turnos de noche
+            // Asignación de turnos de noche
             let nightShiftIndex = 0;
+            for (let dayIndex = 0; dayIndex < totalDays; ) {
+                const dispatcher = updatedDespachadores[nightShiftIndex];
 
-            for (let day = 1; day <= totalDays; day++) {
-                const dayIndex = day - 1;
-
-                // Asignar turnos de mañana y tarde
-                assignShifts(day, "M", 7, 2, dispatcherAvailability);
-                assignShifts(day, "T", 4, 1, dispatcherAvailability);
-
-                // Asignar turno de noche
-                if (nightShiftStartDays.includes(day)) {
-                    nightShiftIndex = assignNightShift(day, nightShiftIndex, dispatcherAvailability);
-                }
-            }
-
-            ensureWorkDays(dispatcherAvailability);
-        }
-
-        function assignShifts(day, shiftType, numDispatchers, numManagers, dispatcherAvailability) {
-            const dayIndex = day - 1;
-            const availableDispatchers = despachadores.filter(dispatcher => dispatcherAvailability[dispatcher][dayIndex]);
-            const dispatchersAssigned = getRandomElements(availableDispatchers, Math.min(numDispatchers, availableDispatchers.length));
-            const managersAssigned = getRandomElements(shiftManagers, numManagers);
-
-            dispatchersAssigned.forEach(dispatcher => {
-                const select = getSelectElement(dispatcher, dayIndex);
-                if (select && !select.classList.contains('blocked')) {
-                    select.value = shiftType;
-                    dispatcherAvailability[dispatcher][dayIndex] = false;
-                }
-            });
-            managersAssigned.forEach(manager => {
-                const select = getSelectElement(manager, dayIndex);
-                if (select && !select.classList.contains('blocked')) {
-                    select.value = shiftType;
-                }
-            });
-        }
-
-        function assignNightShift(startDay, currentNightShiftIndex, dispatcherAvailability) {
-            const dispatcher = despachadores[currentNightShiftIndex];
-            const preDaysOff = 1;
-            const nightShiftDays = 3;
-            const postDaysOff = 2;
-
-            // Día libre antes del turno de noche
-            let dayIndex = startDay - 1 - preDaysOff;
-            if (dayIndex >= 0) {
-                const select = getSelectElement(dispatcher, dayIndex);
-                if (select && !select.classList.contains('blocked')) {
-                    select.value = 'L';
-                    dispatcherAvailability[dispatcher][dayIndex] = false;
-                }
-            }
-
-            // Asignar turnos de noche
-            for (let i = 0; i < nightShiftDays && (startDay + i) <= totalDays; i++) {
-                dayIndex = startDay + i - 1;
-                const select = getSelectElement(dispatcher, dayIndex);
-                if (select && !select.classList.contains('blocked')) {
-                    select.value = "N";
-                    dispatcherAvailability[dispatcher][dayIndex] = false;
-                }
-            }
-
-            // Días libres después del turno de noche
-            for (let i = 0; i < postDaysOff; i++) {
-                dayIndex = startDay + nightShiftDays + i - 1;
-                if (dayIndex < totalDays) {
-                    const select = getSelectElement(dispatcher, dayIndex);
+                // Día libre antes del turno de noche
+                if (dayIndex - 1 >= 0) {
+                    const select = getSelectElement(dispatcher, dayIndex - 1);
                     if (select && !select.classList.contains('blocked')) {
                         select.value = 'L';
-                        dispatcherAvailability[dispatcher][dayIndex] = false;
+                        workerAvailability[dispatcher][dayIndex - 1] = false;
                     }
                 }
+
+                // Asignar 3 noches consecutivas
+                for (let i = 0; i < 3 && (dayIndex + i) < totalDays; i++) {
+                    const select = getSelectElement(dispatcher, dayIndex + i);
+                    if (select && !select.classList.contains('blocked')) {
+                        select.value = 'N';
+                        workerAvailability[dispatcher][dayIndex + i] = false;
+                    }
+                }
+
+                // Días libres después del turno de noche
+                for (let i = 0; i < 2 && (dayIndex + 3 + i) < totalDays; i++) {
+                    const select = getSelectElement(dispatcher, dayIndex + 3 + i);
+                    if (select && !select.classList.contains('blocked')) {
+                        select.value = 'L';
+                        workerAvailability[dispatcher][dayIndex + 3 + i] = false;
+                    }
+                }
+
+                // Actualizar índices
+                dayIndex += 5; // 1 día libre + 3 noches + 2 días libres = 6 días avanzados
+                nightShiftIndex = (nightShiftIndex + 1) % updatedDespachadores.length;
             }
 
-            currentNightShiftIndex = (currentNightShiftIndex + 1) % despachadores.length;
-            return currentNightShiftIndex;
+            // Asignación de turnos de mañana y tarde
+            for (let dayIndex = 0; dayIndex < totalDays; dayIndex++) {
+                assignShifts(dayIndex, "M", 7, 2, workerAvailability, updatedDespachadores, updatedShiftManagers);
+                assignShifts(dayIndex, "T", 4, 1, workerAvailability, updatedDespachadores, updatedShiftManagers);
+            }
+
+            ensureWorkDays(workerAvailability, workers);
+        }
+
+        function assignShifts(dayIndex, shiftType, numDispatchers, numManagers, workerAvailability, dispatchers, managers) {
+            const availableDispatchers = dispatchers.filter(worker => workerAvailability[worker][dayIndex]);
+            const dispatchersAssigned = getRandomElements(availableDispatchers, Math.min(numDispatchers, availableDispatchers.length));
+            const availableManagers = managers.filter(worker => workerAvailability[worker][dayIndex]);
+            const managersAssigned = getRandomElements(availableManagers, Math.min(numManagers, availableManagers.length));
+
+            dispatchersAssigned.forEach(worker => {
+                const select = getSelectElement(worker, dayIndex);
+                if (select && !select.classList.contains('blocked')) {
+                    select.value = shiftType;
+                    workerAvailability[worker][dayIndex] = false;
+                }
+            });
+
+            managersAssigned.forEach(worker => {
+                const select = getSelectElement(worker, dayIndex);
+                if (select && !select.classList.contains('blocked')) {
+                    select.value = shiftType;
+                    workerAvailability[worker][dayIndex] = false;
+                }
+            });
         }
 
         function getSelectElement(worker, dayIndex) {
-            const row = Array.from(shiftTableBody.children).find(row => row.children[0].textContent === worker);
+            const row = Array.from(shiftTableBody.children).find(row => row.children[0].querySelector('input').value === worker);
             return row ? row.children[dayIndex + 1].querySelector('select') : null;
         }
 
@@ -207,32 +299,9 @@
             return shuffled.slice(0, numElements);
         }
 
-        function ensureWorkDays(dispatcherAvailability) {
-            despachadores.forEach(dispatcher => {
-                const row = Array.from(shiftTableBody.children).find(row => row.children[0].textContent === dispatcher);
-                const selects = row.querySelectorAll('select');
-                let workDays = 0;
-                selects.forEach((select, dayIndex) => {
-                    if (select.value !== 'L' && !select.classList.contains('blocked')) {
-                        workDays++;
-                    }
-                });
-
-                let daysNeeded = 20 - workDays;
-                if (daysNeeded > 0) {
-                    for (let dayIndex = 0; dayIndex < totalDays && daysNeeded > 0; dayIndex++) {
-                        const select = selects[dayIndex];
-                        if (dispatcherAvailability[dispatcher][dayIndex] && select.value === 'L' && !select.classList.contains('blocked')) {
-                            select.value = 'M'; // Asignar turno de mañana por defecto
-                            dispatcherAvailability[dispatcher][dayIndex] = false;
-                            daysNeeded--;
-                        }
-                    }
-                }
-            });
-
-            shiftManagers.forEach(manager => {
-                const row = Array.from(shiftTableBody.children).find(row => row.children[0].textContent === manager);
+        function ensureWorkDays(workerAvailability, workers) {
+            workers.forEach(worker => {
+                const row = Array.from(shiftTableBody.children).find(row => row.children[0].querySelector('input').value === worker);
                 const selects = row.querySelectorAll('select');
                 let workDays = 0;
                 selects.forEach(select => {
@@ -245,8 +314,9 @@
                 if (daysNeeded > 0) {
                     for (let dayIndex = 0; dayIndex < totalDays && daysNeeded > 0; dayIndex++) {
                         const select = selects[dayIndex];
-                        if (select.value === 'L' && !select.classList.contains('blocked')) {
+                        if (workerAvailability[worker][dayIndex] && select.value === 'L' && !select.classList.contains('blocked')) {
                             select.value = 'M'; // Asignar turno de mañana por defecto
+                            workerAvailability[worker][dayIndex] = false;
                             daysNeeded--;
                         }
                     }
@@ -254,7 +324,15 @@
             });
         }
 
-        window.onload = createTable;
+        window.onload = () => {
+            populateMonthYearSelectors();
+            createTable();
+        };
+
+        // Actualizar la tabla al cambiar el mes o el año
+        document.getElementById('month').addEventListener('change', createTable);
+        document.getElementById('year').addEventListener('change', createTable);
+        document.getElementById('twoMonths').addEventListener('change', createTable);
     </script>
 </body>
 </html>
