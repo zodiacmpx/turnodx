@@ -172,11 +172,17 @@
       inicializarDespachadores();
       let indiceRotacion = 0; // Índice para rotar despachadores
 
-      calendario.forEach(({ dia, manana, tarde, noche }) => {
+      // Distribuir turnos de noche primero
+      for (let dia = 1; dia <= DIAS_EN_MES; dia += 4) {
+        asignarTurnoNoche(calendario[dia - 1].noche, dia, indiceRotacion);
+        indiceRotacion += 1; // Rotar despachadores
+      }
+
+      // Distribuir turnos de mañana y tarde
+      calendario.forEach(({ dia, manana, tarde }) => {
         asignarTurno(manana, TURNOS_MANANA, dia, indiceRotacion);
         asignarTurno(tarde, TURNOS_TARDE, dia, indiceRotacion);
-        asignarTurnoNoche(noche, dia, indiceRotacion);
-        indiceRotacion += TURNOS_MANANA + TURNOS_TARDE + TURNOS_NOCHE; // Rotar despachadores
+        indiceRotacion += TURNOS_MANANA + TURNOS_TARDE; // Rotar despachadores
       });
 
       actualizarEstadisticas();
@@ -300,5 +306,4 @@
     actualizarEstadisticas();
   </script>
 </body>
-</html>
 </html>
