@@ -182,16 +182,18 @@
     function asignarTurno(select, numDespachadores, dia) {
       select.innerHTML = ''; // Limpiar opciones previas
       let count = 0;
-      despachadores.forEach(desp => {
-        if (disponibilidad[desp][dia - 1]) {
+      const disponibles = despachadores.filter(desp => disponibilidad[desp][dia - 1]);
+      disponibles.some(desp => {
+        if (count < numDespachadores) {
           const option = document.createElement('option');
           option.value = desp;
           option.textContent = desp;
           select.appendChild(option);
           disponibilidad[desp][dia - 1] = false;
           count++;
-          if (count >= numDespachadores) return;
+          return count >= numDespachadores;
         }
+        return false;
       });
     }
 
@@ -205,7 +207,6 @@
           disponibilidad[desp][dia + 3] && // Día de descanso después
           disponibilidad[desp][dia + 4]
         ) {
-          // Asignar este despachador para 4 noches seguidas
           const option = document.createElement('option');
           option.value = desp;
           option.textContent = desp;
