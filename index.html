@@ -3,317 +3,301 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calendario de Turnos - Versión Mejorada</title>
+  <title>Calendario de Turnos Mejorado</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
     }
     table {
-      width: 100%;
       border-collapse: collapse;
       margin-bottom: 20px;
+      width: 100%;
     }
     th, td {
       border: 1px solid #000;
-      padding: 8px;
+      padding: 5px;
       text-align: center;
-    }
-    select {
-      width: 100%;
-      padding: 4px;
-    }
-    button {
-      margin-right: 10px;
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
+      font-size: 12px;
     }
     .controls {
       margin-bottom: 20px;
     }
-    .estadisticas {
-      margin-top: 20px;
-    }
-    .estadisticas h2 {
-      margin-bottom: 10px;
-    }
-    .estadisticas table {
-      width: 50%;
-      margin: 0 auto;
-    }
-    .chart {
-      display: flex;
-      justify-content: center;
-      margin-top: 20px;
-    }
-    .bar {
-      background-color: #4CAF50;
-      margin: 2px;
-      text-align: center;
-      color: white;
-      padding: 5px;
-      width: 30px;
+    h2 {
+      margin-top: 30px;
     }
   </style>
 </head>
 <body>
-  <h1>Calendario de Turnos</h1>
+  <h1>Calendario de Turnos Mejorado</h1>
   <div class="controls">
     <button onclick="generarTurnos()">Generar turnos</button>
-    <button onclick="guardarCambios()">Guardar cambios</button>
-    <button onclick="reiniciarCalendario()">Reiniciar calendario</button>
   </div>
-  <table id="calendar">
+  
+  <h2>Vista Diaria</h2>
+  <table id="dailyTable">
     <thead>
       <tr>
         <th>Día</th>
-        <th>Mañana (5)</th>
-        <th>Tarde (4)</th>
-        <th>Noche (1)</th>
+        <th>Mañana</th>
+        <th>Tarde</th>
+        <th>Noche</th>
       </tr>
     </thead>
     <tbody>
-      <!-- Filas se generarán dinámicamente -->
+      <!-- Se llenará dinámicamente -->
     </tbody>
   </table>
 
-  <div class="estadisticas">
-    <h2>Estadísticas</h2>
-    <table id="statsTable">
-      <thead>
-        <tr>
-          <th>Despachador</th>
-          <th>Total Días Trabajados</th>
-          <th>Mañanas</th>
-          <th>Tardes</th>
-          <th>Noches</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Datos de estadísticas se generarán aquí -->
-      </tbody>
-    </table>
-    <div class="chart" id="chartContainer"></div>
-  </div>
+  <h2>Vista Mensual por Despachador</h2>
+  <table id="monthlyTable">
+    <thead>
+      <tr>
+        <th>Despachador</th>
+        <!-- Columnas para cada día del mes se generarán dinámicamente -->
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Se llenará dinámicamente -->
+    </tbody>
+  </table>
 
   <script>
-    // CONFIGURACIÓN:
-    const NUM_DESPACHADORES = 23; // Si deseas que cada uno llegue a trabajar ~20 días, considera reducir este número.
+    /* CONFIGURACIÓN */
+    const NUM_DESPACHADORES = 16;
     const DIAS_EN_MES = 30;
-    const TURNOS_MANANA = 5;
-    const TURNOS_TARDE = 4;
-    const TURNOS_NOCHE = 1; // Siempre 1
-
-    let despachadores = [];
-    let disponibilidad = {};
-    let calendario = [];
-    // Contador de días trabajados por cada despachador
-    let diasTrabajados = {};
-    // Para llevar cuenta de turnos por tipo
-    let turnosPorTipo = {};
-
-    // Inicializar despachadores, disponibilidad y contadores
+    // Los turnos diarios se asignarán de forma aleatoria dentro de estos rangos:
+    // Mañana: 5 o 6, Tarde: 3 o 4, Noche: 1.
+    
+    /* VARIABLES GLOBALES */
+    let dispatchers = [];                    // Lista de despachadores (nombres)
+    let dispatcherState = {};                // Estado de cada despachador: { lastShift, consecutiveDays, offUntil }
+    let dispatcherSchedule = {};             // Para cada despachador, un array de 1..DIAS_EN_MES con el turno asignado:
+                                             // "M" (mañana), "T" (tarde), "N" (noche) o "off"
+    let dailySchedule = [];                  // Array de días: cada elemento es { morning:[], afternoon:[], night:[] }
+    
+    /* FUNCIONES DE INICIALIZACIÓN */
     function inicializarDespachadores() {
-      despachadores = [];
-      disponibilidad = {};
-      diasTrabajados = {};
-      turnosPorTipo = {};
+      dispatchers = [];
+      dispatcherState = {};
+      dispatcherSchedule = {};
       for (let i = 1; i <= NUM_DESPACHADORES; i++) {
-        const nombre = `Despachador${i}`;
-        despachadores.push(nombre);
-        // Creamos un arreglo de 30 días (true = disponible)
-        disponibilidad[nombre] = Array(DIAS_EN_MES).fill(true);
-        diasTrabajados[nombre] = 0;
-        turnosPorTipo[nombre] = { manana: 0, tarde: 0, noche: 0 };
+        const name = "Despachador" + i;
+        dispatchers.push(name);
+        dispatcherState[name] = {
+          lastShift: "off",     // "manana", "tarde", "noche" o "off"
+          consecutiveDays: 0,   // Días consecutivos trabajando el mismo turno
+          offUntil: 1           // Día a partir del cual está disponible (1-indexado)
+        };
+        // Creamos un array (índices 1..DIAS_EN_MES) inicializado en "off"
+        dispatcherSchedule[name] = Array(DIAS_EN_MES+1).fill("off");
+      }
+      // Inicializamos la vista diaria
+      dailySchedule = Array(DIAS_EN_MES).fill(null).map(() => ({ morning: [], afternoon: [], night: [] }));
+    }
+    
+    /* AYUDANTES PARA LAS RESTRICCIONES */
+    // Devuelve true si el despachador está disponible el día d (1-indexado) según su estado forzado (descanso por 4 días consecutivos)
+    function isAvailable(dispatcher, d) {
+      return d >= dispatcherState[dispatcher].offUntil;
+    }
+    
+    // Verifica si el despachador puede ser asignado al turno 'shift' en el día d según las restricciones del día anterior.
+    // shift: "manana", "tarde" o "noche"
+    function allowedForShift(dispatcher, shift, d) {
+      if (d === 1) return true; // No hay restricciones de día anterior
+      let prev = dispatcherSchedule[dispatcher][d-1]; // turno del día anterior ("M", "T", "N" o "off")
+      if (shift === "manana") {
+        // Si ayer trabajó tarde ("T") o noche ("N"), no se permite volver a la mañana.
+        if (prev === "T" || prev === "N") return false;
+      } else if (shift === "tarde") {
+        // Si ayer trabajó noche ("N"), no se permite pasar a tarde.
+        if (prev === "N") return false;
+      } else if (shift === "noche") {
+        // Para turno de noche se requiere haber descansado el día anterior.
+        if (prev !== "off") return false;
+      }
+      return true;
+    }
+    
+    // Mapea el nombre completo del turno a una abreviatura para la visualización.
+    function shiftLetter(shift) {
+      if (shift === "manana") return "M";
+      if (shift === "tarde") return "T";
+      if (shift === "noche") return "N";
+      return "";
+    }
+    
+    // Actualiza el estado del despachador luego de asignarle un turno en el día d.
+    function updateState(dispatcher, shift, d) {
+      let letter = shiftLetter(shift);
+      // Si el turno de ayer es igual al actual, aumenta el conteo; de lo contrario, se reinicia.
+      let prev = (d > 1) ? dispatcherSchedule[dispatcher][d-1] : "off";
+      if (prev === letter) {
+        dispatcherState[dispatcher].consecutiveDays++;
+      } else {
+        dispatcherState[dispatcher].consecutiveDays = 1;
+      }
+      dispatcherState[dispatcher].lastShift = shift;
+      dispatcherSchedule[dispatcher][d] = letter;
+      
+      // Si alcanza 4 días consecutivos, se asignan 2 días de descanso.
+      if (dispatcherState[dispatcher].consecutiveDays === 4) {
+        dispatcherState[dispatcher].offUntil = d + 3; // Descanso en los 2 días siguientes; disponible a partir del día d+3.
       }
     }
-
-    // Crear la estructura del calendario
-    function crearCalendario() {
-      const tbody = document.querySelector('#calendar tbody');
-      tbody.innerHTML = '';
-      calendario = [];
-      for (let dia = 1; dia <= DIAS_EN_MES; dia++) {
-        const row = document.createElement('tr');
-        const cellDia = document.createElement('td');
-        cellDia.textContent = `Día ${dia}`;
-        row.appendChild(cellDia);
-
-        // Turno mañana
-        const cellManana = document.createElement('td');
-        const selectManana = document.createElement('select');
-        selectManana.setAttribute('data-dia', dia);
-        selectManana.setAttribute('data-turno', 'manana');
-        cellManana.appendChild(selectManana);
-        row.appendChild(cellManana);
-
-        // Turno tarde
-        const cellTarde = document.createElement('td');
-        const selectTarde = document.createElement('select');
-        selectTarde.setAttribute('data-dia', dia);
-        selectTarde.setAttribute('data-turno', 'tarde');
-        cellTarde.appendChild(selectTarde);
-        row.appendChild(cellTarde);
-
-        // Turno noche
-        const cellNoche = document.createElement('td');
-        const selectNoche = document.createElement('select');
-        selectNoche.setAttribute('data-dia', dia);
-        selectNoche.setAttribute('data-turno', 'noche');
-        cellNoche.appendChild(selectNoche);
-        row.appendChild(cellNoche);
-
-        tbody.appendChild(row);
-
-        // Guardar referencias en el calendario
-        calendario.push({
-          dia,
-          manana: selectManana,
-          tarde: selectTarde,
-          noche: selectNoche
+    
+    // Si el despachador no es asignado en el día d, se marca como "off" y se reinicia la continuidad.
+    function markOff(dispatcher, d) {
+      dispatcherSchedule[dispatcher][d] = "off";
+      dispatcherState[dispatcher].consecutiveDays = 0;
+      dispatcherState[dispatcher].lastShift = "off";
+    }
+    
+    /* ALGORITMO DE ASIGNACIÓN */
+    function generarTurnos() {
+      inicializarDespachadores();
+      
+      // Se recorre cada día del mes (d de 1 a DIAS_EN_MES)
+      for (let d = 1; d <= DIAS_EN_MES; d++) {
+        // Se definen las cantidades requeridas para el día:
+        let reqManana = Math.random() < 0.5 ? 5 : 6;
+        let reqTarde = Math.random() < 0.5 ? 3 : 4;
+        let reqNoche = 1;
+        
+        // Conjunto para saber quién ya fue asignado en el día d.
+        let assignedToday = new Set();
+        
+        // --- PRIMER PASO: ASIGNACIÓN POR CONTINUIDAD ---
+        // Si un despachador ya tiene turno asignado el día anterior (diferente de "off")
+        // se intenta asignarle el mismo turno hoy, siempre que cumpla las restricciones.
+        dispatchers.forEach(disp => {
+          if (assignedToday.has(disp)) return;
+          if (!isAvailable(disp, d)) return;
+          let pref = dispatcherState[disp].lastShift; // Puede ser "manana", "tarde", "noche" o "off"
+          if (pref !== "off" && allowedForShift(disp, pref, d)) {
+            if (pref === "manana" && reqManana > 0) {
+              dailySchedule[d-1].morning.push(disp);
+              assignedToday.add(disp);
+              updateState(disp, "manana", d);
+              reqManana--;
+            } else if (pref === "tarde" && reqTarde > 0) {
+              dailySchedule[d-1].tarde.push(disp);
+              assignedToday.add(disp);
+              updateState(disp, "tarde", d);
+              reqTarde--;
+            } else if (pref === "noche" && reqNoche > 0) {
+              dailySchedule[d-1].night.push(disp);
+              assignedToday.add(disp);
+              updateState(disp, "noche", d);
+              reqNoche--;
+            }
+          }
+        });
+        
+        // --- SEGUNDO PASO: COMPLETAR LOS TURNOS QUE QUEDEN VACANTES ---
+        // Función interna para llenar un turno (mañana, tarde o noche)
+        function fillShift(shiftType, requiredCount) {
+          while (requiredCount > 0) {
+            // Se filtran candidatos disponibles que no hayan sido asignados hoy y que cumplan la restricción.
+            let candidates = dispatchers.filter(disp => {
+              return !assignedToday.has(disp) && isAvailable(disp, d) && allowedForShift(disp, shiftType, d);
+            });
+            if (candidates.length === 0) break;
+            // Se ordenan los candidatos por la cantidad de días consecutivos (se prefiere reiniciar la secuencia para balancear)
+            candidates.sort((a, b) => dispatcherState[a].consecutiveDays - dispatcherState[b].consecutiveDays);
+            let chosen = candidates[0];
+            if (shiftType === "manana") {
+              dailySchedule[d-1].morning.push(chosen);
+            } else if (shiftType === "tarde") {
+              dailySchedule[d-1].tarde.push(chosen);
+            } else if (shiftType === "noche") {
+              dailySchedule[d-1].night.push(chosen);
+            }
+            assignedToday.add(chosen);
+            updateState(chosen, shiftType, d);
+            requiredCount--;
+          }
+        }
+        
+        fillShift("manana", reqManana);
+        fillShift("tarde", reqTarde);
+        fillShift("noche", reqNoche);
+        
+        // --- TERCER PASO: LOS NO ASIGNADOS QUEDAN EN DESCANSO ---
+        dispatchers.forEach(disp => {
+          if (!assignedToday.has(disp)) {
+            markOff(disp, d);
+          }
         });
       }
+      
+      // Una vez generada la asignación, se actualizan las vistas.
+      actualizarVistaDiaria();
+      actualizarVistaMensual();
     }
-
-    // Función para asignar turnos (mañana o tarde) de forma balanceada
-    function asignarTurno(select, numDespachadores, dia, turnoTipo) {
-      select.innerHTML = ''; // Limpiar opciones previas
-      // Filtrar despachadores disponibles en el día
-      let disponibles = despachadores.filter(desp => disponibilidad[desp][dia - 1]);
-      // Ordenar de menor a mayor según los días trabajados
-      disponibles.sort((a, b) => diasTrabajados[a] - diasTrabajados[b]);
-
-      for (let i = 0; i < numDespachadores && i < disponibles.length; i++) {
-        const desp = disponibles[i];
-        const option = document.createElement('option');
-        option.value = desp;
-        option.textContent = desp;
-        select.appendChild(option);
-        // Marcar que el despachador ya trabajó este día
-        disponibilidad[desp][dia - 1] = false;
-        diasTrabajados[desp]++;
-        turnosPorTipo[desp][turnoTipo]++;
+    
+    /* VISUALIZACIONES */
+    // Actualiza la vista diaria (tabla con día y los despachadores asignados a cada turno)
+    function actualizarVistaDiaria() {
+      const tbody = document.getElementById("dailyTable").querySelector("tbody");
+      tbody.innerHTML = "";
+      for (let d = 1; d <= DIAS_EN_MES; d++) {
+        const row = document.createElement("tr");
+        const cellDay = document.createElement("td");
+        cellDay.textContent = "Día " + d;
+        row.appendChild(cellDay);
+        
+        const cellManana = document.createElement("td");
+        cellManana.textContent = dailySchedule[d-1].morning.join(", ");
+        row.appendChild(cellManana);
+        
+        const cellTarde = document.createElement("td");
+        cellTarde.textContent = dailySchedule[d-1].tarde.join(", ");
+        row.appendChild(cellTarde);
+        
+        const cellNoche = document.createElement("td");
+        cellNoche.textContent = dailySchedule[d-1].night.join(", ");
+        row.appendChild(cellNoche);
+        
+        tbody.appendChild(row);
       }
     }
-
-    // Función para asignar el turno de noche con restricciones adicionales
-    function asignarTurnoNoche(select, dia) {
-      select.innerHTML = '';
-      // Para el turno de noche se exige que además estén disponibles el día anterior y los 4 días siguientes
-      let disponibles = despachadores.filter(desp => {
-         const idx = dia - 1; // Índice del día actual
-         const condActual = disponibilidad[desp][idx];
-         const condAntes = (idx - 1 >= 0) ? disponibilidad[desp][idx - 1] : true;
-         const condDespues1 = (idx + 1 < DIAS_EN_MES) ? disponibilidad[desp][idx + 1] : true;
-         const condDespues2 = (idx + 2 < DIAS_EN_MES) ? disponibilidad[desp][idx + 2] : true;
-         const condDespues3 = (idx + 3 < DIAS_EN_MES) ? disponibilidad[desp][idx + 3] : true;
-         const condDespues4 = (idx + 4 < DIAS_EN_MES) ? disponibilidad[desp][idx + 4] : true;
-         return condActual && condAntes && condDespues1 && condDespues2 && condDespues3 && condDespues4;
-      });
-      // Ordenamos por días trabajados
-      disponibles.sort((a, b) => diasTrabajados[a] - diasTrabajados[b]);
-      if (disponibles.length > 0) {
-         const desp = disponibles[0];
-         const option = document.createElement('option');
-         option.value = desp;
-         option.textContent = desp;
-         select.appendChild(option);
-         // Definir los índices a bloquear (se bloquea el día anterior, el actual y los 4 días siguientes)
-         const indicesABloquear = [];
-         const idx = dia - 1;
-         if (idx - 1 >= 0) indicesABloquear.push(idx - 1);  // día anterior
-         indicesABloquear.push(idx);                         // día actual
-         if (idx + 1 < DIAS_EN_MES) indicesABloquear.push(idx + 1);
-         if (idx + 2 < DIAS_EN_MES) indicesABloquear.push(idx + 2);
-         if (idx + 3 < DIAS_EN_MES) indicesABloquear.push(idx + 3);
-         if (idx + 4 < DIAS_EN_MES) indicesABloquear.push(idx + 4);
-         indicesABloquear.forEach(i => {
-             disponibilidad[desp][i] = false;
-         });
-         diasTrabajados[desp]++;
-         turnosPorTipo[desp].noche++;
+    
+    // Actualiza la vista mensual por despachador (tabla donde cada fila es un despachador y cada columna un día)
+    function actualizarVistaMensual() {
+      const monthlyTable = document.getElementById("monthlyTable");
+      const theadRow = monthlyTable.querySelector("thead tr");
+      theadRow.innerHTML = "<th>Despachador</th>";
+      for (let d = 1; d <= DIAS_EN_MES; d++) {
+        const th = document.createElement("th");
+        th.textContent = d;
+        theadRow.appendChild(th);
       }
-    }
-
-    // Generar turnos: primero los de noche (por restricciones) y luego los de mañana y tarde
-    function generarTurnos() {
-      // Reiniciar contadores y disponibilidad
-      inicializarDespachadores();
-      crearCalendario();
-
-      // Asignar turno de noche para cada día
-      calendario.forEach(({ dia, noche }) => {
-        asignarTurnoNoche(noche, dia);
-      });
-      // Asignar turnos de mañana y tarde para cada día
-      calendario.forEach(({ dia, manana, tarde }) => {
-        asignarTurno(manana, TURNOS_MANANA, dia, 'manana');
-        asignarTurno(tarde, TURNOS_TARDE, dia, 'tarde');
-      });
-
-      actualizarEstadisticas();
-    }
-
-    // Actualizar estadísticas y gráfico
-    function actualizarEstadisticas() {
-      const stats = {};
-      despachadores.forEach(desp => {
-        stats[desp] = {
-          total: diasTrabajados[desp],
-          manana: turnosPorTipo[desp].manana,
-          tarde: turnosPorTipo[desp].tarde,
-          noche: turnosPorTipo[desp].noche
-        };
-      });
-
-      const statsTableBody = document.querySelector('#statsTable tbody');
-      statsTableBody.innerHTML = '';
-      Object.entries(stats).forEach(([desp, data]) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${desp}</td>
-          <td>${data.total}</td>
-          <td>${data.manana}</td>
-          <td>${data.tarde}</td>
-          <td>${data.noche}</td>
-        `;
-        statsTableBody.appendChild(row);
-      });
-
-      generarGraficoBarras(stats);
-    }
-
-    // Generar gráfico de barras según los días trabajados
-    function generarGraficoBarras(stats) {
-      const chartContainer = document.getElementById('chartContainer');
-      chartContainer.innerHTML = '';
-      Object.entries(stats).forEach(([desp, data]) => {
-        const bar = document.createElement('div');
-        bar.className = 'bar';
-        bar.style.height = `${data.total * 10}px`;
-        bar.textContent = data.total;
-        chartContainer.appendChild(bar);
+      
+      const tbody = monthlyTable.querySelector("tbody");
+      tbody.innerHTML = "";
+      dispatchers.forEach(disp => {
+        const row = document.createElement("tr");
+        const cellName = document.createElement("td");
+        cellName.textContent = disp;
+        row.appendChild(cellName);
+        for (let d = 1; d <= DIAS_EN_MES; d++) {
+          const cell = document.createElement("td");
+          cell.textContent = dispatcherSchedule[disp][d]; // "M", "T", "N" o "off"
+          row.appendChild(cell);
+        }
+        tbody.appendChild(row);
       });
     }
-
-    // Guardar cambios manuales (simulación)
-    function guardarCambios() {
-      alert('Cambios guardados.');
-      actualizarEstadisticas();
-    }
-
-    // Reiniciar calendario
-    function reiniciarCalendario() {
-      crearCalendario();
-      alert('Calendario reiniciado.');
-      actualizarEstadisticas();
-    }
-
-    // Inicialización al cargar la página
+    
+    // Inicialización: se crean los despachadores y se muestra el estado inicial (todo off)
     inicializarDespachadores();
-    crearCalendario();
-    actualizarEstadisticas();
+    actualizarVistaDiaria();
+    actualizarVistaMensual();
   </script>
+</body>
+</html>
+
 </body>
 </html>
