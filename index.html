@@ -2,376 +2,158 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Generador de Turnos Inteligente</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario de Turnos</title>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
         }
         th, td {
-            border: 1px solid #000;
+            border: 1px solid #ddd;
+            padding: 8px;
             text-align: center;
-            padding: 4px;
         }
         th {
-            background-color: #f2f2f2;
+            background-color: #f4f4f4;
         }
-        .header-buttons {
-            margin-bottom: 10px;
+        .editable {
+            cursor: pointer;
         }
-        .blocked {
-            background-color: #f00;
-            color: #fff;
+        .editable:hover {
+            background-color: #f9f9f9;
         }
-        input.worker-name {
-            width: 100px;
-        }
-        .month-year-select {
-            margin-bottom: 10px;
+        button {
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
         }
     </style>
 </head>
 <body>
-    <h1>Generador de Turnos</h1>
-    <div class="month-year-select">
-        <label for="month">Mes:</label>
-        <select id="month">
-            <!-- Opciones de meses -->
-        </select>
-        <label for="year">Año:</label>
-        <select id="year">
-            <!-- Opciones de años -->
-        </select>
-        <label>
-            <input type="checkbox" id="twoMonths">
-            Generar para dos meses
-        </label>
-    </div>
-    <div class="header-buttons">
-        <button onclick="intelligentAssignment()">Asignación Inteligente</button>
-        <button onclick="clearShifts()">Limpiar Turnos</button>
-    </div>
-    <table>
+    <h1>Calendario de Turnos</h1>
+    <button id="generarTurnos">Generar Turnos</button>
+    <table id="calendario">
         <thead>
-            <tr id="header-row">
-                <th>Trabajador</th>
-                <!-- Celdas de encabezado para los días -->
+            <tr>
+                <th>Día</th>
+                <th>Mañana (5)</th>
+                <th>Tarde (4)</th>
+                <th>Noche (1)</th>
             </tr>
         </thead>
-        <tbody id="shift-table-body">
-            <!-- Filas generadas dinámicamente -->
+        <tbody>
+            <!-- Aquí se generará el calendario -->
         </tbody>
     </table>
 
     <script>
-        const defaultDespachadores = [
-            "Despachador 1",
-            "Despachador 2",
-            "Despachador 3",
-            "Despachador 4",
-            "Despachador 5",
-            "Despachador 6",
-            "Despachador 7",
-            "Despachador 8",
-            "Despachador 9",
-            "Despachador 10",
-            "Despachador 11",
-            "Despachador 12",
-            "Despachador 13",
-            "Despachador 14",
-            "Despachador 15"
-        ];
-
-        const defaultShiftManagers = [
-            "JT1", "JT2", "JT3", "JT4"
-        ];
-
-        let totalDays = 31;
-        let shiftTableBody = document.getElementById('shift-table-body');
-        let daysArray = [];
-
-        function populateMonthYearSelectors() {
-            const monthSelect = document.getElementById('month');
-            const yearSelect = document.getElementById('year');
-            const currentYear = new Date().getFullYear();
-
-            const months = [
-                "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-                "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-            ];
-
-            months.forEach((month, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                option.textContent = month;
-                monthSelect.appendChild(option);
-            });
-
-            for (let year = currentYear - 1; year <= currentYear + 1; year++) {
-                const option = document.createElement('option');
-                option.value = year;
-                option.textContent = year;
-                yearSelect.appendChild(option);
-            }
-
-            // Seleccionar el mes y año actuales por defecto
-            monthSelect.value = new Date().getMonth();
-            yearSelect.value = new Date().getFullYear();
-        }
-
-        function createTable() {
-            // Limpiar la tabla si ya existe
-            document.getElementById('header-row').innerHTML = '<th>Trabajador</th>';
-            shiftTableBody.innerHTML = '';
-
-            const monthSelect = document.getElementById('month');
-            const yearSelect = document.getElementById('year');
-            const twoMonths = document.getElementById('twoMonths').checked;
-
-            const selectedMonth = parseInt(monthSelect.value);
-            const selectedYear = parseInt(yearSelect.value);
-
-            daysArray = [];
-            let date = new Date(selectedYear, selectedMonth, 1);
-
-            // Obtener los días del mes seleccionado y, opcionalmente, del mes siguiente
-            for (let m = 0; m < (twoMonths ? 2 : 1); m++) {
-                const month = (selectedMonth + m) % 12;
-                const year = selectedYear + Math.floor((selectedMonth + m) / 12);
-                const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-                for (let d = 1; d <= daysInMonth; d++) {
-                    daysArray.push({ day: d, month: month, year: year });
-                }
-            }
-
-            totalDays = daysArray.length;
-
-            // Crear encabezado dinámicamente
-            const headerRow = document.getElementById('header-row');
-            daysArray.forEach(dateObj => {
-                const th = document.createElement('th');
-                th.textContent = `${dateObj.day}/${dateObj.month + 1}`;
-                headerRow.appendChild(th);
-            });
-
-            const workers = [...defaultDespachadores, ...defaultShiftManagers];
-            workers.forEach((worker, index) => {
-                const row = document.createElement('tr');
-                const workerCell = document.createElement('td');
-
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'worker-name';
-                input.value = worker;
-                workerCell.appendChild(input);
-                row.appendChild(workerCell);
-
-                for (let i = 0; i < totalDays; i++) {
-                    const dayCell = document.createElement('td');
-                    const select = document.createElement('select');
-                    select.oncontextmenu = (event) => {
-                        event.preventDefault();
-                        toggleBlock(event.target);
-                    };
-                    ["L", "M", "T", "N"].forEach(shift => {
-                        const option = document.createElement('option');
-                        option.value = shift;
-                        option.textContent = shift;
-                        select.appendChild(option);
-                    });
-                    dayCell.appendChild(select);
-                    row.appendChild(dayCell);
-                }
-                shiftTableBody.appendChild(row);
-            });
-        }
-
-        function toggleBlock(select) {
-            if (select.classList.contains('blocked')) {
-                select.classList.remove('blocked');
-                select.disabled = false;
-            } else {
-                select.classList.add('blocked');
-                select.disabled = true;
-            }
-        }
-
-        function clearShifts() {
-            document.querySelectorAll('select').forEach(select => {
-                if (!select.classList.contains('blocked')) {
-                    select.value = 'L';
-                }
-            });
-        }
-
-        function intelligentAssignment() {
-            // Obtener nombres actualizados de los trabajadores
-            const workers = Array.from(shiftTableBody.children).map(row => row.children[0].querySelector('input').value);
-
-            // Separar despachadores y jefes de turno
-            const updatedDespachadores = workers.slice(0, defaultDespachadores.length);
-            const updatedShiftManagers = workers.slice(defaultDespachadores.length);
-
-            // Inicializar disponibilidad considerando asignaciones previas y bloqueos
-            let workerAvailability = {};
-            workers.forEach(worker => {
-                workerAvailability[worker] = [];
-                for (let dayIndex = 0; dayIndex < totalDays; dayIndex++) {
-                    const select = getSelectElement(worker, dayIndex);
-                    if (select && (select.value !== 'L' || select.classList.contains('blocked'))) {
-                        workerAvailability[worker][dayIndex] = false; // No disponible si ya tiene turno asignado o está bloqueado
-                    } else {
-                        workerAvailability[worker][dayIndex] = true;
-                    }
-                }
-            });
-
-            // Asignación de turnos de noche
-            let currentDay = 0;
-            let nightShiftIndex = 0;
-            while (currentDay < totalDays) {
-                const dispatcher = updatedDespachadores[nightShiftIndex % updatedDespachadores.length];
-
-                // Verificar disponibilidad para el ciclo completo
-                let canAssign = true;
-                for (let i = 0; i < 6 && (currentDay + i) < totalDays; i++) {
-                    if (!workerAvailability[dispatcher][currentDay + i]) {
-                        canAssign = false;
-                        break;
-                    }
-                }
-
-                if (canAssign) {
-                    // Día libre antes del turno de noche
-                    setShift(dispatcher, currentDay, 'L', workerAvailability);
-                    currentDay++;
-
-                    // Asignar 3 noches consecutivas
-                    for (let i = 0; i < 3 && currentDay < totalDays; i++) {
-                        setShift(dispatcher, currentDay, 'N', workerAvailability);
-                        currentDay++;
-                    }
-
-                    // Días libres después del turno de noche
-                    for (let i = 0; i < 2 && currentDay < totalDays; i++) {
-                        setShift(dispatcher, currentDay, 'L', workerAvailability);
-                        currentDay++;
-                    }
-
-                    nightShiftIndex++;
-                } else {
-                    nightShiftIndex++;
-                    if (nightShiftIndex >= updatedDespachadores.length) {
-                        // No se pudo asignar a ningún despachador, avanzar al siguiente día
-                        currentDay++;
-                        nightShiftIndex = 0;
-                    }
-                }
-            }
-
-            // Asegurar que siempre haya un despachador en el turno de noche
-            for (let i = 0; i < totalDays; i++) {
-                const assignedDispatchers = updatedDespachadores.filter(worker => {
-                    const select = getSelectElement(worker, i);
-                    return select && select.value === 'N';
-                });
-
-                if (assignedDispatchers.length === 0) {
-                    // Asignar el turno de noche a un despachador disponible
-                    const availableDispatchers = updatedDespachadores.filter(worker => {
-                        return workerAvailability[worker][i];
-                    });
-
-                    if (availableDispatchers.length > 0) {
-                        const dispatcher = availableDispatchers[0];
-                        setShift(dispatcher, i, 'N', workerAvailability);
-                    } else {
-                        console.warn(`No hay despachadores disponibles para el turno de noche en el día ${i + 1}`);
-                    }
-                }
-            }
-
-            // Asignación de turnos de mañana y tarde
-            for (let dayIndex = 0; dayIndex < totalDays; dayIndex++) {
-                assignShifts(dayIndex, "M", 7, 2, workerAvailability, updatedDespachadores, updatedShiftManagers);
-                assignShifts(dayIndex, "T", 4, 1, workerAvailability, updatedDespachadores, updatedShiftManagers);
-            }
-
-            ensureWorkDays(workerAvailability, workers);
-        }
-
-        function setShift(worker, dayIndex, shiftType, workerAvailability) {
-            const select = getSelectElement(worker, dayIndex);
-            if (select && workerAvailability[worker][dayIndex]) {
-                select.value = shiftType;
-                workerAvailability[worker][dayIndex] = false;
-            }
-        }
-
-        function isBlocked(worker, dayIndex) {
-            const select = getSelectElement(worker, dayIndex);
-            return select && select.classList.contains('blocked');
-        }
-
-        function assignShifts(dayIndex, shiftType, numDispatchers, numManagers, workerAvailability, dispatchers, managers) {
-            const availableDispatchers = dispatchers.filter(worker => workerAvailability[worker][dayIndex]);
-            const dispatchersAssigned = getRandomElements(availableDispatchers, Math.min(numDispatchers, availableDispatchers.length));
-            const availableManagers = managers.filter(worker => workerAvailability[worker][dayIndex]);
-            const managersAssigned = getRandomElements(availableManagers, Math.min(numManagers, availableManagers.length));
-
-            dispatchersAssigned.forEach(worker => {
-                setShift(worker, dayIndex, shiftType, workerAvailability);
-            });
-
-            managersAssigned.forEach(worker => {
-                setShift(worker, dayIndex, shiftType, workerAvailability);
-            });
-        }
-
-        function getSelectElement(worker, dayIndex) {
-            const row = Array.from(shiftTableBody.children).find(row => row.children[0].querySelector('input').value === worker);
-            return row ? row.children[dayIndex + 1].querySelector('select') : null;
-        }
-
-        function getRandomElements(array, numElements) {
-            const shuffled = array.slice().sort(() => Math.random() - 0.5);
-            return shuffled.slice(0, numElements);
-        }
-
-        function ensureWorkDays(workerAvailability, workers) {
-            workers.forEach(worker => {
-                const row = Array.from(shiftTableBody.children).find(row => row.children[0].querySelector('input').value === worker);
-                const selects = row.querySelectorAll('select');
-                let workDays = 0;
-                selects.forEach(select => {
-                    if (select.value !== 'L' && !select.classList.contains('blocked')) {
-                        workDays++;
-                    }
-                });
-
-                let daysNeeded = 20 - workDays;
-                if (daysNeeded > 0) {
-                    for (let dayIndex = 0; dayIndex < totalDays && daysNeeded > 0; dayIndex++) {
-                        const select = selects[dayIndex];
-                        if (workerAvailability[worker][dayIndex]) {
-                            setShift(worker, dayIndex, 'M', workerAvailability);
-                            daysNeeded--;
-                        }
-                    }
-                }
-            });
-        }
-
-        window.onload = () => {
-            populateMonthYearSelectors();
-            createTable();
+        const diasDelMes = 30; // Número de días en el mes
+        const numDespachadores = 23;
+        const turnos = {
+            mañana: 5,
+            tarde: 4,
+            noche: 1
         };
 
-        // Actualizar la tabla al cambiar el mes o el año
-        document.getElementById('month').addEventListener('change', createTable);
-        document.getElementById('year').addEventListener('change', createTable);
-        document.getElementById('twoMonths').addEventListener('change', createTable);
+        let despachadores = Array.from({ length: numDespachadores }, (_, i) => `D${i + 1}`);
+        let calendarioData = [];
+
+        function generarTurnos() {
+            calendarioData = [];
+            let contadorNoche = 0;
+            let turnoNocheActivo = false;
+            let diasDescanso = 0;
+
+            for (let dia = 1; dia <= diasDelMes; dia++) {
+                let mañana = [];
+                let tarde = [];
+                let noche = [];
+
+                // Asignar turnos de mañana y tarde
+                mañana = despachadores.slice(0, turnos.mañana);
+                tarde = despachadores.slice(turnos.mañana, turnos.mañana + turnos.tarde);
+
+                // Asignar turno de noche
+                if (!turnoNocheActivo && diasDescanso === 0) {
+                    noche.push(despachadores[(contadorNoche % numDespachadores)]);
+                    turnoNocheActivo = true;
+                    diasDescanso = 4; // 4 noches seguidas
+                } else if (turnoNocheActivo) {
+                    noche.push(despachadores[(contadorNoche % numDespachadores)]);
+                    diasDescanso--;
+                    if (diasDescanso === 0) {
+                        turnoNocheActivo = false;
+                        contadorNoche++;
+                        diasDescanso = 3; // 1 día antes + 2 días después
+                    }
+                }
+
+                calendarioData.push({ día: dia, mañana, tarde, noche });
+            }
+
+            renderizarCalendario();
+        }
+
+        function renderizarCalendario() {
+            const tbody = document.querySelector("#calendario tbody");
+            tbody.innerHTML = "";
+
+            calendarioData.forEach(({ día, mañana, tarde, noche }) => {
+                const row = document.createElement("tr");
+
+                // Día
+                const cellDia = document.createElement("td");
+                cellDia.textContent = día;
+                row.appendChild(cellDia);
+
+                // Mañana
+                const cellManana = document.createElement("td");
+                cellManana.textContent = mañana.join(", ");
+                cellManana.classList.add("editable");
+                cellManana.addEventListener("click", () => editarCelda(cellManana, día, "mañana"));
+                row.appendChild(cellManana);
+
+                // Tarde
+                const cellTarde = document.createElement("td");
+                cellTarde.textContent = tarde.join(", ");
+                cellTarde.classList.add("editable");
+                cellTarde.addEventListener("click", () => editarCelda(cellTarde, día, "tarde"));
+                row.appendChild(cellTarde);
+
+                // Noche
+                const cellNoche = document.createElement("td");
+                cellNoche.textContent = noche.join(", ");
+                cellNoche.classList.add("editable");
+                cellNoche.addEventListener("click", () => editarCelda(cellNoche, día, "noche"));
+                row.appendChild(cellNoche);
+
+                tbody.appendChild(row);
+            });
+        }
+
+        function editarCelda(celda, día, turno) {
+            const nuevosValores = prompt(`Editar turnos para el día ${día} (${turno}):`, celda.textContent);
+            if (nuevosValores !== null) {
+                const valoresArray = nuevosValores.split(",").map(valor => valor.trim());
+                const index = calendarioData.findIndex(item => item.día === día);
+                if (index !== -1) {
+                    calendarioData[index][turno] = valoresArray;
+                    renderizarCalendario();
+                }
+            }
+        }
+
+        document.getElementById("generarTurnos").addEventListener("click", generarTurnos);
+
+        // Generar turnos al cargar la página
+        generarTurnos();
     </script>
+</body>
+</html>
 </body>
 </html>
