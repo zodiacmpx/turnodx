@@ -32,6 +32,29 @@
     .controls {
       margin-bottom: 20px;
     }
+    .estadisticas {
+      margin-top: 20px;
+    }
+    .estadisticas h2 {
+      margin-bottom: 10px;
+    }
+    .estadisticas table {
+      width: 50%;
+      margin: 0 auto;
+    }
+    .chart {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .bar {
+      background-color: #4CAF50;
+      margin: 2px;
+      text-align: center;
+      color: white;
+      padding: 5px;
+      width: 30px;
+    }
   </style>
 </head>
 <body>
@@ -54,6 +77,25 @@
       <!-- Filas se generarán dinámicamente -->
     </tbody>
   </table>
+
+  <div class="estadisticas">
+    <h2>Estadísticas</h2>
+    <table id="statsTable">
+      <thead>
+        <tr>
+          <th>Despachador</th>
+          <th>Total Días Trabajados</th>
+          <th>Mañanas</th>
+          <th>Tardes</th>
+          <th>Noches</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Datos de estadísticas se generarán aquí -->
+      </tbody>
+    </table>
+    <div class="chart" id="chartContainer"></div>
+  </div>
 
   <script>
     const NUM_DESPACHADORES = 23;
@@ -133,6 +175,7 @@
         asignarTurno(tarde, TURNOS_TARDE, dia);
         asignarTurnoNoche(noche, dia);
       });
+      actualizarEstadisticas();
     }
 
     // Asignar turnos generales (mañana o tarde)
@@ -181,21 +224,76 @@
       });
     }
 
+    // Actualizar estadísticas
+    function actualizarEstadisticas() {
+      const stats = {};
+      despachadores.forEach(desp => {
+        stats[desp] = { total: 0, manana: 0, tarde: 0, noche: 0 };
+      });
+
+      calendario.forEach(({ manana, tarde, noche }, index) => {
+        Array.from(manana.selectedOptions).forEach(option => {
+          stats[option.value].total++;
+          stats[option.value].manana++;
+        });
+        Array.from(tarde.selectedOptions).forEach(option => {
+          stats[option.value].total++;
+          stats[option.value].tarde++;
+        });
+        Array.from(noche.selectedOptions).forEach(option => {
+          stats[option.value].total++;
+          stats[option.value].noche++;
+        });
+      });
+
+      const statsTableBody = document.querySelector('#statsTable tbody');
+      statsTableBody.innerHTML = '';
+      Object.entries(stats).forEach(([desp, data]) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${desp}</td>
+          <td>${data.total}</td>
+          <td>${data.manana}</td>
+          <td>${data.tarde}</td>
+          <td>${data.noche}</td>
+        `;
+        statsTableBody.appendChild(row);
+      });
+
+      // Generar gráfico de barras
+      generarGraficoBarras(stats);
+    }
+
+    // Generar gráfico de barras
+    function generarGraficoBarras(stats) {
+      const chartContainer = document.getElementById('chartContainer');
+      chartContainer.innerHTML = '';
+      Object.entries(stats).forEach(([desp, data]) => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = `${data.total * 10}px`;
+        bar.textContent = data.total;
+        chartContainer.appendChild(bar);
+      });
+    }
+
     // Guardar cambios manuales
     function guardarCambios() {
       alert('Cambios guardados.');
-      // Aquí podrías implementar lógica para guardar en localStorage o enviar datos al servidor
+      actualizarEstadisticas();
     }
 
     // Reiniciar calendario
     function reiniciarCalendario() {
       crearCalendario();
       alert('Calendario reiniciado.');
+      actualizarEstadisticas();
     }
 
     // Inicialización
     inicializarDespachadores();
     crearCalendario();
+    actualizarEstadisticas();
   </script>
 </body>
 </html>
