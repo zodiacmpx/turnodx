@@ -170,59 +170,62 @@
     // Asignar despachadores automáticamente
     function generarTurnos() {
       inicializarDespachadores();
+      let indiceRotacion = 0; // Índice para rotar despachadores
+
       calendario.forEach(({ dia, manana, tarde, noche }) => {
-        asignarTurno(manana, TURNOS_MANANA, dia);
-        asignarTurno(tarde, TURNOS_TARDE, dia);
-        asignarTurnoNoche(noche, dia);
+        asignarTurno(manana, TURNOS_MANANA, dia, indiceRotacion);
+        asignarTurno(tarde, TURNOS_TARDE, dia, indiceRotacion);
+        asignarTurnoNoche(noche, dia, indiceRotacion);
+        indiceRotacion += TURNOS_MANANA + TURNOS_TARDE + TURNOS_NOCHE; // Rotar despachadores
       });
+
       actualizarEstadisticas();
     }
 
     // Asignar turnos generales (mañana o tarde)
-    function asignarTurno(select, numDespachadores, dia) {
+    function asignarTurno(select, numDespachadores, dia, indiceRotacion) {
       select.innerHTML = ''; // Limpiar opciones previas
-      let count = 0;
       const disponibles = despachadores.filter(desp => disponibilidad[desp][dia - 1]);
-      disponibles.some(desp => {
-        if (count < numDespachadores) {
+
+      for (let i = 0; i < numDespachadores; i++) {
+        const indice = (indiceRotacion + i) % disponibles.length;
+        const desp = disponibles[indice];
+        if (disponibilidad[desp][dia - 1]) {
           const option = document.createElement('option');
           option.value = desp;
           option.textContent = desp;
           select.appendChild(option);
           disponibilidad[desp][dia - 1] = false;
-          count++;
-          return count >= numDespachadores;
         }
-        return false;
-      });
+      }
     }
 
     // Asignar turno de noche
-    function asignarTurnoNoche(select, dia) {
+    function asignarTurnoNoche(select, dia, indiceRotacion) {
       select.innerHTML = ''; // Limpiar opciones previas
-      despachadores.some(desp => {
-        if (
-          disponibilidad[desp][dia - 1] &&
-          disponibilidad[desp][dia - 2] && // Día de descanso antes
-          disponibilidad[desp][dia + 3] && // Día de descanso después
-          disponibilidad[desp][dia + 4]
-        ) {
-          const option = document.createElement('option');
-          option.value = desp;
-          option.textContent = desp;
-          select.appendChild(option);
+      const disponibles = despachadores.filter(desp =>
+        disponibilidad[desp][dia - 1] &&
+        disponibilidad[desp][dia - 2] && // Día de descanso antes
+        disponibilidad[desp][dia + 3] && // Día de descanso después
+        disponibilidad[desp][dia + 4]
+      );
 
-          // Marcar días como no disponibles
-          for (let k = 0; k < 4; k++) {
-            disponibilidad[desp][dia - 1 + k] = false;
-          }
-          disponibilidad[desp][dia - 2] = false;
-          disponibilidad[desp][dia + 3] = false;
-          disponibilidad[desp][dia + 4] = false;
-          return true; // Salir del loop
+      if (disponibles.length > 0) {
+        const indice = indiceRotacion % disponibles.length;
+        const desp = disponibles[indice];
+        const option = document.createElement('option');
+        option.value = desp;
+        option.textContent = desp;
+        select.appendChild(option);
+
+        // Marcar días como no disponibles
+        for (let k = 0; k < 4; k++) {
+          disponibilidad[desp][dia - 1 + k] = false;
         }
-        return false;
-      });
+        disponibilidad[desp][dia - 2] = false;
+        disponibilidad[desp][dia + 3] = false;
+        disponibilidad[desp][dia + 4] = false;
+      }
     }
 
     // Actualizar estadísticas
@@ -297,4 +300,5 @@
     actualizarEstadisticas();
   </script>
 </body>
+</html>
 </html>
