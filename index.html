@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calendario de Turnos</title>
+  <title>Calendario de Turnos - Versión Mejorada</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -98,26 +98,35 @@
   </div>
 
   <script>
-    const NUM_DESPACHADORES = 23;
+    // CONFIGURACIÓN:
+    const NUM_DESPACHADORES = 23; // Si deseas que cada uno llegue a trabajar ~20 días, considera reducir este número.
     const DIAS_EN_MES = 30;
     const TURNOS_MANANA = 5;
     const TURNOS_TARDE = 4;
-    const TURNOS_NOCHE = 1;
+    const TURNOS_NOCHE = 1; // Siempre 1
 
     let despachadores = [];
     let disponibilidad = {};
     let calendario = [];
+    // Contador de días trabajados por cada despachador
+    let diasTrabajados = {};
+    // Para llevar cuenta de turnos por tipo
+    let turnosPorTipo = {};
 
-    // Inicializar despachadores y disponibilidad
+    // Inicializar despachadores, disponibilidad y contadores
     function inicializarDespachadores() {
       despachadores = [];
-      for (let i = 1; i <= NUM_DESPACHADORES; i++) {
-        despachadores.push(`Despachador${i}`);
-      }
       disponibilidad = {};
-      despachadores.forEach(desp => {
-        disponibilidad[desp] = Array(DIAS_EN_MES).fill(true);
-      });
+      diasTrabajados = {};
+      turnosPorTipo = {};
+      for (let i = 1; i <= NUM_DESPACHADORES; i++) {
+        const nombre = `Despachador${i}`;
+        despachadores.push(nombre);
+        // Creamos un arreglo de 30 días (true = disponible)
+        disponibilidad[nombre] = Array(DIAS_EN_MES).fill(true);
+        diasTrabajados[nombre] = 0;
+        turnosPorTipo[nombre] = { manana: 0, tarde: 0, noche: 0 };
+      }
     }
 
     // Crear la estructura del calendario
@@ -167,97 +176,95 @@
       }
     }
 
-    // Asignar despachadores automáticamente
-    function generarTurnos() {
-      inicializarDespachadores();
-      let cuotas = {};
-      despachadores.forEach(desp => {
-        cuotas[desp] = 20; // Cada despachador debe trabajar 20 días
-      });
+    // Función para asignar turnos (mañana o tarde) de forma balanceada
+    function asignarTurno(select, numDespachadores, dia, turnoTipo) {
+      select.innerHTML = ''; // Limpiar opciones previas
+      // Filtrar despachadores disponibles en el día
+      let disponibles = despachadores.filter(desp => disponibilidad[desp][dia - 1]);
+      // Ordenar de menor a mayor según los días trabajados
+      disponibles.sort((a, b) => diasTrabajados[a] - diasTrabajados[b]);
 
-      // Priorizar turnos de noche
-      for (let dia = 1; dia <= DIAS_EN_MES; dia += 4) {
-        asignarTurnoNoche(calendario[dia - 1].noche, dia, cuotas);
+      for (let i = 0; i < numDespachadores && i < disponibles.length; i++) {
+        const desp = disponibles[i];
+        const option = document.createElement('option');
+        option.value = desp;
+        option.textContent = desp;
+        select.appendChild(option);
+        // Marcar que el despachador ya trabajó este día
+        disponibilidad[desp][dia - 1] = false;
+        diasTrabajados[desp]++;
+        turnosPorTipo[desp][turnoTipo]++;
       }
+    }
 
-      // Asignar turnos de mañana y tarde
+    // Función para asignar el turno de noche con restricciones adicionales
+    function asignarTurnoNoche(select, dia) {
+      select.innerHTML = '';
+      // Para el turno de noche se exige que además estén disponibles el día anterior y los 4 días siguientes
+      let disponibles = despachadores.filter(desp => {
+         const idx = dia - 1; // Índice del día actual
+         const condActual = disponibilidad[desp][idx];
+         const condAntes = (idx - 1 >= 0) ? disponibilidad[desp][idx - 1] : true;
+         const condDespues1 = (idx + 1 < DIAS_EN_MES) ? disponibilidad[desp][idx + 1] : true;
+         const condDespues2 = (idx + 2 < DIAS_EN_MES) ? disponibilidad[desp][idx + 2] : true;
+         const condDespues3 = (idx + 3 < DIAS_EN_MES) ? disponibilidad[desp][idx + 3] : true;
+         const condDespues4 = (idx + 4 < DIAS_EN_MES) ? disponibilidad[desp][idx + 4] : true;
+         return condActual && condAntes && condDespues1 && condDespues2 && condDespues3 && condDespues4;
+      });
+      // Ordenamos por días trabajados
+      disponibles.sort((a, b) => diasTrabajados[a] - diasTrabajados[b]);
+      if (disponibles.length > 0) {
+         const desp = disponibles[0];
+         const option = document.createElement('option');
+         option.value = desp;
+         option.textContent = desp;
+         select.appendChild(option);
+         // Definir los índices a bloquear (se bloquea el día anterior, el actual y los 4 días siguientes)
+         const indicesABloquear = [];
+         const idx = dia - 1;
+         if (idx - 1 >= 0) indicesABloquear.push(idx - 1);  // día anterior
+         indicesABloquear.push(idx);                         // día actual
+         if (idx + 1 < DIAS_EN_MES) indicesABloquear.push(idx + 1);
+         if (idx + 2 < DIAS_EN_MES) indicesABloquear.push(idx + 2);
+         if (idx + 3 < DIAS_EN_MES) indicesABloquear.push(idx + 3);
+         if (idx + 4 < DIAS_EN_MES) indicesABloquear.push(idx + 4);
+         indicesABloquear.forEach(i => {
+             disponibilidad[desp][i] = false;
+         });
+         diasTrabajados[desp]++;
+         turnosPorTipo[desp].noche++;
+      }
+    }
+
+    // Generar turnos: primero los de noche (por restricciones) y luego los de mañana y tarde
+    function generarTurnos() {
+      // Reiniciar contadores y disponibilidad
+      inicializarDespachadores();
+      crearCalendario();
+
+      // Asignar turno de noche para cada día
+      calendario.forEach(({ dia, noche }) => {
+        asignarTurnoNoche(noche, dia);
+      });
+      // Asignar turnos de mañana y tarde para cada día
       calendario.forEach(({ dia, manana, tarde }) => {
-        asignarTurno(manana, TURNOS_MANANA, dia, cuotas);
-        asignarTurno(tarde, TURNOS_TARDE, dia, cuotas);
+        asignarTurno(manana, TURNOS_MANANA, dia, 'manana');
+        asignarTurno(tarde, TURNOS_TARDE, dia, 'tarde');
       });
 
       actualizarEstadisticas();
     }
 
-    // Asignar turnos generales (mañana o tarde)
-    function asignarTurno(select, numDespachadores, dia, cuotas) {
-      select.innerHTML = ''; // Limpiar opciones previas
-      const disponibles = despachadores.filter(desp => disponibilidad[desp][dia - 1] && cuotas[desp] > 0);
-
-      for (let i = 0; i < numDespachadores; i++) {
-        if (disponibles.length === 0) break; // No hay más despachadores disponibles
-        const indice = i % disponibles.length;
-        const desp = disponibles[indice];
-        if (disponibilidad[desp][dia - 1] && cuotas[desp] > 0) {
-          const option = document.createElement('option');
-          option.value = desp;
-          option.textContent = desp;
-          select.appendChild(option);
-          disponibilidad[desp][dia - 1] = false;
-          cuotas[desp]--;
-        }
-      }
-    }
-
-    // Asignar turno de noche
-    function asignarTurnoNoche(select, dia, cuotas) {
-      select.innerHTML = ''; // Limpiar opciones previas
-      const disponibles = despachadores.filter(desp =>
-        disponibilidad[desp][dia - 1] &&
-        disponibilidad[desp][dia - 2] && // Día de descanso antes
-        disponibilidad[desp][dia + 3] && // Día de descanso después
-        disponibilidad[desp][dia + 4] &&
-        cuotas[desp] >= 4 // Debe tener cuota suficiente para 4 noches
-      );
-
-      if (disponibles.length > 0) {
-        const desp = disponibles[0]; // Tomar el primer disponible
-        const option = document.createElement('option');
-        option.value = desp;
-        option.textContent = desp;
-        select.appendChild(option);
-
-        // Marcar días como no disponibles
-        for (let k = 0; k < 4; k++) {
-          disponibilidad[desp][dia - 1 + k] = false;
-          cuotas[desp]--;
-        }
-        disponibilidad[desp][dia - 2] = false;
-        disponibilidad[desp][dia + 3] = false;
-        disponibilidad[desp][dia + 4] = false;
-      }
-    }
-
-    // Actualizar estadísticas
+    // Actualizar estadísticas y gráfico
     function actualizarEstadisticas() {
       const stats = {};
       despachadores.forEach(desp => {
-        stats[desp] = { total: 0, manana: 0, tarde: 0, noche: 0 };
-      });
-
-      calendario.forEach(({ manana, tarde, noche }, index) => {
-        Array.from(manana.selectedOptions).forEach(option => {
-          stats[option.value].total++;
-          stats[option.value].manana++;
-        });
-        Array.from(tarde.selectedOptions).forEach(option => {
-          stats[option.value].total++;
-          stats[option.value].tarde++;
-        });
-        Array.from(noche.selectedOptions).forEach(option => {
-          stats[option.value].total++;
-          stats[option.value].noche++;
-        });
+        stats[desp] = {
+          total: diasTrabajados[desp],
+          manana: turnosPorTipo[desp].manana,
+          tarde: turnosPorTipo[desp].tarde,
+          noche: turnosPorTipo[desp].noche
+        };
       });
 
       const statsTableBody = document.querySelector('#statsTable tbody');
@@ -274,11 +281,10 @@
         statsTableBody.appendChild(row);
       });
 
-      // Generar gráfico de barras
       generarGraficoBarras(stats);
     }
 
-    // Generar gráfico de barras
+    // Generar gráfico de barras según los días trabajados
     function generarGraficoBarras(stats) {
       const chartContainer = document.getElementById('chartContainer');
       chartContainer.innerHTML = '';
@@ -291,7 +297,7 @@
       });
     }
 
-    // Guardar cambios manuales
+    // Guardar cambios manuales (simulación)
     function guardarCambios() {
       alert('Cambios guardados.');
       actualizarEstadisticas();
@@ -304,7 +310,7 @@
       actualizarEstadisticas();
     }
 
-    // Inicialización
+    // Inicialización al cargar la página
     inicializarDespachadores();
     crearCalendario();
     actualizarEstadisticas();
