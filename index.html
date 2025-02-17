@@ -5,171 +5,197 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Calendario de Turnos</title>
   <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
+      margin-bottom: 20px;
     }
     th, td {
       border: 1px solid #000;
       padding: 8px;
-      text-align: left;
+      text-align: center;
     }
-    select, input {
-      display: block;
+    select {
       width: 100%;
+      padding: 4px;
+    }
+    button {
+      margin-right: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .controls {
+      margin-bottom: 20px;
     }
   </style>
 </head>
 <body>
   <h1>Calendario de Turnos</h1>
+  <div class="controls">
+    <button onclick="generarTurnos()">Generar turnos</button>
+    <button onclick="guardarCambios()">Guardar cambios</button>
+    <button onclick="reiniciarCalendario()">Reiniciar calendario</button>
+  </div>
   <table id="calendar">
     <thead>
       <tr>
         <th>Día</th>
-        <th>Mañana</th>
-        <th>Tarde</th>
-        <th>Noche</th>
+        <th>Mañana (5)</th>
+        <th>Tarde (4)</th>
+        <th>Noche (1)</th>
       </tr>
     </thead>
     <tbody>
-      <!-- Generar filas para cada día del mes -->
-      <!-- Ejemplo para día 1 -->
-      <tr>
-        <td>Día 1</td>
-        <td>
-          <select>
-            <option value="">----</option>
-            <!-- Agregar opciones de despachadores aquí -->
-          </select>
-          <input type="checkbox" name="bloquear"> Bloquear
-        </td>
-        <td>
-          <select>
-            <option value="">----</option>
-            <!-- Agregar opciones de despachadores aquí -->
-          </select>
-          <input type="checkbox" name="bloquear"> Bloquear
-        </td>
-        <td>
-          <select>
-            <option value="">----</option>
-            <!-- Agregar opciones de despachadores aquí -->
-          </select>
-          <input type="checkbox" name="bloquear"> Bloquear
-        </td>
-      </tr>
-      <!-- Repetir para días 2 a 30 -->
+      <!-- Filas se generarán dinámicamente -->
     </tbody>
   </table>
-  <button onclick="generarTurnos()">Generar turnos</button>
 
   <script>
-    function generarTurnos() {
-      // Obtener la tabla
-      const table = document.getElementById('calendar').getElementsByTagName('tbody')[0];
-      const rows = table.getElementsByTagName('tr');
+    const NUM_DESPACHADORES = 23;
+    const DIAS_EN_MES = 30;
+    const TURNOS_MANANA = 5;
+    const TURNOS_TARDE = 4;
+    const TURNOS_NOCHE = 1;
 
-      // Listas de despachadores disponibles
-      const despachadores = [];
-      for (let i = 1; i <= 23; i++) {
+    let despachadores = [];
+    let disponibilidad = {};
+    let calendario = [];
+
+    // Inicializar despachadores y disponibilidad
+    function inicializarDespachadores() {
+      despachadores = [];
+      for (let i = 1; i <= NUM_DESPACHADORES; i++) {
         despachadores.push(`Despachador${i}`);
       }
-
-      // Array para trackear la disponibilidad de cada despachador
-      const disponibilidad = {};
+      disponibilidad = {};
       despachadores.forEach(desp => {
-        disponibilidad[desp] = Array(30).fill(true); // Suponiendo 30 días
+        disponibilidad[desp] = Array(DIAS_EN_MES).fill(true);
       });
+    }
 
-      // Primero, identificar asignaciones bloqueadas y actualizar disponibilidad
-      for (let i = 0; i < rows.length; i++) {
-        const day = i + 1;
-        const cells = rows[i].getElementsByTagName('td');
-        for (let j = 0; j < cells.length; j++) {
-          const select = cells[j].getElementsByTagName('select')[0];
-          const bloquear = cells[j].getElementsByTagName('input')[0];
-          if (bloquear.checked) {
-            const selectedDesp = select.value;
-            if (selectedDesp !== '') {
-              // Marcar este despachador como no disponible para este día y turno
-              disponibilidad[selectedDesp][day - 1] = false;
-            }
-          }
-        }
-      }
+    // Crear la estructura del calendario
+    function crearCalendario() {
+      const tbody = document.querySelector('#calendar tbody');
+      tbody.innerHTML = '';
+      calendario = [];
+      for (let dia = 1; dia <= DIAS_EN_MES; dia++) {
+        const row = document.createElement('tr');
+        const cellDia = document.createElement('td');
+        cellDia.textContent = `Día ${dia}`;
+        row.appendChild(cellDia);
 
-      // Ahora, asignar turnos de noche
-      for (let i = 0; i < rows.length; i++) {
-        const day = i + 1;
-        const nocheCell = rows[i].getElementsByTagName('td')[3]; // Índice 3 para turno de noche
-        const selectNoche = nocheCell.getElementsByTagName('select')[0];
-        const bloquearNoche = nocheCell.getElementsByTagName('input')[0];
+        // Turno mañana
+        const cellManana = document.createElement('td');
+        const selectManana = document.createElement('select');
+        selectManana.setAttribute('data-dia', dia);
+        selectManana.setAttribute('data-turno', 'manana');
+        cellManana.appendChild(selectManana);
+        row.appendChild(cellManana);
 
-        if (!bloquearNoche.checked && selectNoche.value === '') {
-          // Asignar despachador para este turno de noche
-          for (let d = 0; d < despachadores.length; d++) {
-            const desp = despachadores[d];
-            if (disponibilidad[desp][day - 1] && disponibilidad[desp][day - 2] && disponibilidad[desp][day + 3] && disponibilidad[desp][day + 4]) {
-              // Asignar este despachador para 4 noches seguidas
-              selectNoche.value = desp;
-              // Marcar los días correspondientes como no disponibles
-              for (let k = 0; k < 4; k++) {
-                disponibilidad[desp][day - 1 + k] = false;
-              }
-              // Marcar día antes y dos días después como no disponibles
-              disponibilidad[desp][day - 2] = false;
-              disponibilidad[desp][day + 3] = false;
-              disponibilidad[desp][day + 4] = false;
-              break; // Salir del loop de despachadores una vez asignado
-            }
-          }
-        }
-      }
+        // Turno tarde
+        const cellTarde = document.createElement('td');
+        const selectTarde = document.createElement('select');
+        selectTarde.setAttribute('data-dia', dia);
+        selectTarde.setAttribute('data-turno', 'tarde');
+        cellTarde.appendChild(selectTarde);
+        row.appendChild(cellTarde);
 
-      // Luego, asignar turnos de día y tarde
-      for (let i = 0; i < rows.length; i++) {
-        const day = i + 1;
-        const mañanaCell = rows[i].getElementsByTagName('td')[1]; // Índice 1 para turno de mañana
-        const tardeCell = rows[i].getElementsByTagName('td')[2]; // Índice 2 para turno de tarde
-        const selectMañana = mañanaCell.getElementsByTagName('select')[0];
-        const selectTarde = tardeCell.getElementsByTagName('select')[0];
-        const bloquearMañana = mañanaCell.getElementsByTagName('input')[0];
-        const bloquearTarde = tardeCell.getElementsByTagName('input')[0];
+        // Turno noche
+        const cellNoche = document.createElement('td');
+        const selectNoche = document.createElement('select');
+        selectNoche.setAttribute('data-dia', dia);
+        selectNoche.setAttribute('data-turno', 'noche');
+        cellNoche.appendChild(selectNoche);
+        row.appendChild(cellNoche);
 
-        if (!bloquearMañana.checked && selectMañana.value === '') {
-          // Asignar despachadores para turno de mañana
-          let count = 0;
-          for (let d = 0; d < despachadores.length; d++) {
-            const desp = despachadores[d];
-            if (disponibilidad[desp][day - 1]) {
-              selectMañana.appendChild(createOption(desp, desp));
-              count++;
-              if (count >= 5) break; // Asignar 5 despachadores
-            }
-          }
-        }
+        tbody.appendChild(row);
 
-        if (!bloquearTarde.checked && selectTarde.value === '') {
-          // Asignar despachadores para turno de tarde
-          let count = 0;
-          for (let d = 0; d < despachadores.length; d++) {
-            const desp = despachadores[d];
-            if (disponibilidad[desp][day - 1]) {
-              selectTarde.appendChild(createOption(desp, desp));
-              count++;
-              if (count >= 4) break; // Asignar 4 despachadores
-            }
-          }
-        }
+        // Guardar referencias en el calendario
+        calendario.push({
+          dia,
+          manana: selectManana,
+          tarde: selectTarde,
+          noche: selectNoche
+        });
       }
     }
 
-    function createOption(value, text) {
-      const option = document.createElement('option');
-      option.value = value;
-      option.text = text;
-      return option;
+    // Asignar despachadores automáticamente
+    function generarTurnos() {
+      inicializarDespachadores();
+      calendario.forEach(({ dia, manana, tarde, noche }) => {
+        asignarTurno(manana, TURNOS_MANANA, dia);
+        asignarTurno(tarde, TURNOS_TARDE, dia);
+        asignarTurnoNoche(noche, dia);
+      });
     }
+
+    // Asignar turnos generales (mañana o tarde)
+    function asignarTurno(select, numDespachadores, dia) {
+      select.innerHTML = ''; // Limpiar opciones previas
+      let count = 0;
+      despachadores.forEach(desp => {
+        if (disponibilidad[desp][dia - 1]) {
+          const option = document.createElement('option');
+          option.value = desp;
+          option.textContent = desp;
+          select.appendChild(option);
+          disponibilidad[desp][dia - 1] = false;
+          count++;
+          if (count >= numDespachadores) return;
+        }
+      });
+    }
+
+    // Asignar turno de noche
+    function asignarTurnoNoche(select, dia) {
+      select.innerHTML = ''; // Limpiar opciones previas
+      despachadores.some(desp => {
+        if (
+          disponibilidad[desp][dia - 1] &&
+          disponibilidad[desp][dia - 2] && // Día de descanso antes
+          disponibilidad[desp][dia + 3] && // Día de descanso después
+          disponibilidad[desp][dia + 4]
+        ) {
+          // Asignar este despachador para 4 noches seguidas
+          const option = document.createElement('option');
+          option.value = desp;
+          option.textContent = desp;
+          select.appendChild(option);
+
+          // Marcar días como no disponibles
+          for (let k = 0; k < 4; k++) {
+            disponibilidad[desp][dia - 1 + k] = false;
+          }
+          disponibilidad[desp][dia - 2] = false;
+          disponibilidad[desp][dia + 3] = false;
+          disponibilidad[desp][dia + 4] = false;
+          return true; // Salir del loop
+        }
+        return false;
+      });
+    }
+
+    // Guardar cambios manuales
+    function guardarCambios() {
+      alert('Cambios guardados.');
+      // Aquí podrías implementar lógica para guardar en localStorage o enviar datos al servidor
+    }
+
+    // Reiniciar calendario
+    function reiniciarCalendario() {
+      crearCalendario();
+      alert('Calendario reiniciado.');
+    }
+
+    // Inicialización
+    inicializarDespachadores();
+    crearCalendario();
   </script>
 </body>
 </html>
