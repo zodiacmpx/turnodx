@@ -226,7 +226,7 @@
         <h1>🗓️ Generador de Turnos - Sistema de Despacho</h1>
         
         <div class="alert-info">
-            <strong>ℹ️ Turnos de Noche:</strong> Noche Semana = Lun-Mar-Mié-Jue (4 días) | Noche Fin de Semana = Vie-Sáb-Dom (3 días) | 3 días libres después | Máximo 1 turno de noche por despachador/mes
+            <strong>ℹ️ Turnos de Noche:</strong> Noche Semana = Lun-Mar-Mié-Jue (4 días consecutivos) | Noche Fin de Semana = Vie-Sáb-Dom (3 días consecutivos) | 3 días libres después | Máximo 1 turno de noche por despachador/mes
         </div>
         
         <div class="controls">
@@ -362,49 +362,77 @@
             document.getElementById('calendario-head').innerHTML = html;
         }
 
-        function obtenerSemanas(mes, anio) {
-            const diasEnMes = new Date(anio, mes + 1, 0).getDate();
-            let semanas = [];
-            let semanaActual = { nocheSemana: [], nocheFinde: [] };
+        function encontrarBloquesNoche(mes, anio, diasEnMes) {
+            let bloques = {
+                nocheSemana: [],
+                nocheFinde: []
+            };
             
-            for (let dia = 0; dia < diasEnMes; dia++) {
-                const fecha = new Date(anio, mes, dia);
-                const diaSemana = fecha.getDay(); // 0=Dom, 1=Lun, ..., 6=Sáb
+            let i = 0;
+            while (i < diasEnMes) {
+                const fecha = new Date(anio, mes, i);
+                const diaSemana = fecha.getDay();
                 
-                // Noche Semana: Lunes(1) a Jueves(4)
-                if (diaSemana >= 1 && diaSemana <= 4) {
-                    semanaActual.nocheSemana.push(dia);
-                }
-                
-                // Noche Fin de Semana: Viernes(5), Sábado(6), Domingo(0)
-                if (diaSemana === 5 || diaSemana === 6) {
-                    semanaActual.nocheFinde.push(dia);
-                }
-                
-                // Al llegar al domingo, cerrar la semana
-                if (diaSemana === 0) {
-                    semanaActual.nocheFinde.push(dia);
+                // Buscar bloques de Noche Semana: Lun-Mar-Mié-Jue
+                if (diaSemana === 1) { // Lunes
+                    let bloque = [];
+                    let j = i;
                     
-                    // Solo agregar si tiene días válidos
-                    if (semanaActual.nocheSemana.length > 0 || semanaActual.nocheFinde.length > 0) {
-                        semanas.push(semanaActual);
+                    // Verificar que sean 4 días consecutivos: Lun, Mar, Mié, Jue
+                    for (let k = 0; k < 4; k++) {
+                        if (j + k < diasEnMes) {
+                            const fechaTemp = new Date(anio, mes, j + k);
+                            const diaTemp = fechaTemp.getDay();
+                            
+                            // Debe ser lunes(1), martes(2), miércoles(3), jueves(4)
+                            if (diaTemp === 1 + k) {
+                                bloque.push(j + k);
+                            } else {
+                                break;
+                            }
+                        }
                     }
                     
-                    semanaActual = { nocheSemana: [], nocheFinde: [] };
+                    if (bloque.length === 4) {
+                        bloques.nocheSemana.push(bloque);
+                    }
                 }
+                
+                // Buscar bloques de Noche Fin de Semana: Vie-Sáb-Dom
+                if (diaSemana === 5) { // Viernes
+                    let bloque = [];
+                    let j = i;
+                    
+                    // Verificar que sean 3 días consecutivos: Vie, Sáb, Dom
+                    for (let k = 0; k < 3; k++) {
+                        if (j + k < diasEnMes) {
+                            const fechaTemp = new Date(anio, mes, j + k);
+                            const diaTemp = fechaTemp.getDay();
+                            
+                            // Debe ser viernes(5), sábado(6), domingo(0)
+                            if ((k === 0 && diaTemp === 5) || 
+                                (k === 1 && diaTemp === 6) || 
+                                (k === 2 && diaTemp === 0)) {
+                                bloque.push(j + k);
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (bloque.length === 3) {
+                        bloques.nocheFinde.push(bloque);
+                    }
+                }
+                
+                i++;
             }
             
-            // Agregar última semana si quedó incompleta
-            if (semanaActual.nocheSemana.length > 0 || semanaActual.nocheFinde.length > 0) {
-                semanas.push(semanaActual);
-            }
-            
-            return semanas;
+            return bloques;
         }
 
         function asignarTurnosNoche(mes, anio, diasEnMes) {
-            const semanas = obtenerSemanas(mes, anio);
-            const despNocheAsignados = new Set();
+            const bloques = encontrarBloquesNoche(mes, anio, diasEnMes);
             const turnosNochePorPersona = {};
             
             despachadores.forEach(d => turnosNochePorPersona[d.nombre] = 0);
@@ -412,89 +440,103 @@
             // Mezclar despachadores para variedad
             const despMezclados = [...despachadores].sort(() => Math.random() - 0.5);
             
-            semanas.forEach((semana, indexSemana) => {
-                // Asignar Noche Semana (Lun-Jue)
-                if (semana.nocheSemana.length >= 4) {
-                    let asignado = false;
-                    
-                    for (let desp of despMezclados) {
-                        // Verificar que no tenga ya un turno de noche y que esté disponible
-                        if (turnosNochePorPersona[desp.nombre] === 0) {
-                            let puedeAsignar = true;
-                            
-                            // Verificar que los 4 días + 3 de descanso estén libres
-                            for (let i = 0; i < semana.nocheSemana.length + 3; i++) {
-                                const diaCheck = semana.nocheSemana[0] + i;
-                                if (diaCheck < diasEnMes && calendario[desp.nombre][diaCheck] !== null) {
-                                    puedeAsignar = false;
-                                    break;
-                                }
+            // Asignar bloques de Noche Semana (Lun-Jue)
+            bloques.nocheSemana.forEach(bloque => {
+                let asignado = false;
+                
+                for (let desp of despMezclados) {
+                    // Solo si no tiene turno de noche aún
+                    if (turnosNochePorPersona[desp.nombre] === 0) {
+                        let puedeAsignar = true;
+                        
+                        // Verificar que todos los días del bloque + 3 de descanso estén libres
+                        const diasTotales = [...bloque];
+                        for (let i = 1; i <= 3; i++) {
+                            const diaDescanso = bloque[bloque.length - 1] + i;
+                            if (diaDescanso < diasEnMes) {
+                                diasTotales.push(diaDescanso);
                             }
-                            
-                            if (puedeAsignar) {
-                                // Asignar los 4 días de noche
-                                semana.nocheSemana.forEach(dia => {
-                                    calendario[desp.nombre][dia] = 'NS';
-                                });
-                                
-                                // Asignar 3 días libres después
-                                for (let i = 1; i <= 3; i++) {
-                                    const diaLibre = semana.nocheSemana[semana.nocheSemana.length - 1] + i;
-                                    if (diaLibre < diasEnMes && calendario[desp.nombre][diaLibre] === null) {
-                                        calendario[desp.nombre][diaLibre] = 'L';
-                                    }
-                                }
-                                
-                                turnosNochePorPersona[desp.nombre]++;
-                                despNocheAsignados.add(desp.nombre);
-                                asignado = true;
+                        }
+                        
+                        // Verificar días fijos
+                        for (let dia of diasTotales) {
+                            if (calendario[desp.nombre][dia] !== null) {
+                                puedeAsignar = false;
                                 break;
                             }
                         }
-                    }
-                }
-                
-                // Asignar Noche Fin de Semana (Vie-Dom)
-                if (semana.nocheFinde.length >= 3) {
-                    let asignado = false;
-                    
-                    for (let desp of despMezclados) {
-                        // Verificar que no tenga ya un turno de noche
-                        if (turnosNochePorPersona[desp.nombre] === 0) {
-                            let puedeAsignar = true;
+                        
+                        if (puedeAsignar) {
+                            // Asignar el bloque completo de noche
+                            bloque.forEach(dia => {
+                                calendario[desp.nombre][dia] = 'NS';
+                            });
                             
-                            // Verificar que los 3 días + 3 de descanso estén libres
-                            for (let i = 0; i < semana.nocheFinde.length + 3; i++) {
-                                const diaCheck = semana.nocheFinde[0] + i;
-                                if (diaCheck < diasEnMes && calendario[desp.nombre][diaCheck] !== null) {
-                                    puedeAsignar = false;
-                                    break;
+                            // Asignar 3 días libres después
+                            for (let i = 1; i <= 3; i++) {
+                                const diaLibre = bloque[bloque.length - 1] + i;
+                                if (diaLibre < diasEnMes) {
+                                    calendario[desp.nombre][diaLibre] = 'L';
                                 }
                             }
                             
-                            if (puedeAsignar) {
-                                // Asignar los 3 días de noche
-                                semana.nocheFinde.forEach(dia => {
-                                    calendario[desp.nombre][dia] = 'NF';
-                                });
-                                
-                                // Asignar 3 días libres después
-                                for (let i = 1; i <= 3; i++) {
-                                    const diaLibre = semana.nocheFinde[semana.nocheFinde.length - 1] + i;
-                                    if (diaLibre < diasEnMes && calendario[desp.nombre][diaLibre] === null) {
-                                        calendario[desp.nombre][diaLibre] = 'L';
-                                    }
-                                }
-                                
-                                turnosNochePorPersona[desp.nombre]++;
-                                despNocheAsignados.add(desp.nombre);
-                                asignado = true;
-                                break;
-                            }
+                            turnosNochePorPersona[desp.nombre]++;
+                            asignado = true;
+                            break;
                         }
                     }
                 }
             });
+            
+            // Asignar bloques de Noche Fin de Semana (Vie-Dom)
+            bloques.nocheFinde.forEach(bloque => {
+                let asignado = false;
+                
+                for (let desp of despMezclados) {
+                    // Solo si no tiene turno de noche aún
+                    if (turnosNochePorPersona[desp.nombre] === 0) {
+                        let puedeAsignar = true;
+                        
+                        // Verificar que todos los días del bloque + 3 de descanso estén libres
+                        const diasTotales = [...bloque];
+                        for (let i = 1; i <= 3; i++) {
+                            const diaDescanso = bloque[bloque.length - 1] + i;
+                            if (diaDescanso < diasEnMes) {
+                                diasTotales.push(diaDescanso);
+                            }
+                        }
+                        
+                        // Verificar días fijos
+                        for (let dia of diasTotales) {
+                            if (calendario[desp.nombre][dia] !== null) {
+                                puedeAsignar = false;
+                                break;
+                            }
+                        }
+                        
+                        if (puedeAsignar) {
+                            // Asignar el bloque completo de noche
+                            bloque.forEach(dia => {
+                                calendario[desp.nombre][dia] = 'NF';
+                            });
+                            
+                            // Asignar 3 días libres después
+                            for (let i = 1; i <= 3; i++) {
+                                const diaLibre = bloque[bloque.length - 1] + i;
+                                if (diaLibre < diasEnMes) {
+                                    calendario[desp.nombre][diaLibre] = 'L';
+                                }
+                            }
+                            
+                            turnosNochePorPersona[desp.nombre]++;
+                            asignado = true;
+                            break;
+                        }
+                    }
+                }
+            });
+            
+            console.log('Turnos de noche asignados:', turnosNochePorPersona);
         }
 
         function generarTurnos() {
@@ -543,6 +585,10 @@
                 if (calendario[nombre][dia] && calendario[nombre][dia] !== 'L') {
                     diasTrabajados++;
                     if (calendario[nombre][dia] === 'T') tardesAsignadas++;
+                    if (calendario[nombre][dia] === 'NS' || calendario[nombre][dia] === 'NF') {
+                        const fecha = new Date(anio, mes, dia);
+                        if (fecha.getDay() === 0) domingosTrabajados++;
+                    }
                 }
             }
             
@@ -709,11 +755,10 @@
             let html = '';
             personal.forEach(p => {
                 html += `<tr><td style="font-weight: 600; text-align: left; position: sticky; left: 0; background: white; z-index: 5;">
-                    ${p.nombre}${p.esJefe? '<span class="jefe-badge">JEFE</span>' : ''}
+                    ${p.nombre}${p.esJefe ? '<span class="jefe-badge">JEFE</span>' : ''}
                 </td>`;
                 
                 let diasTrabajados = 0;
-                let turnosNoche = 0;
                 
                 for (let dia = 0; dia < diasEnMes; dia++) {
                     const turno = calendario[p.nombre][dia] || '-';
@@ -726,14 +771,8 @@
                     
                     if (turno === 'D') clase = 'dia';
                     else if (turno === 'T') clase = 'tarde';
-                    else if (turno === 'NS') {
-                        clase = 'noche-sem';
-                        turnosNoche++;
-                    }
-                    else if (turno === 'NF') {
-                        clase = 'noche-fds';
-                        turnosNoche++;
-                    }
+                    else if (turno === 'NS') clase = 'noche-sem';
+                    else if (turno === 'NF') clase = 'noche-fds';
                     else if (turno === 'L') clase = 'libre';
                     
                     if (turno !== 'L' && turno !== '-') diasTrabajados++;
@@ -746,25 +785,28 @@
                     </td>`;
                 }
                 
-                // Contar turnos de noche únicos (no días)
+                // Contar turnos de noche únicos (bloques, no días)
                 let turnosNocheUnicos = 0;
-                let enNocheSemana = false;
-                let enNocheFinde = false;
+                let enBloqueNS = false;
+                let enBloqueNF = false;
                 
                 for (let dia = 0; dia < diasEnMes; dia++) {
                     const turno = calendario[p.nombre][dia];
-                    if (turno === 'NS' && !enNocheSemana) {
+                    
+                    // Detectar inicio de bloque NS
+                    if (turno === 'NS' && !enBloqueNS) {
                         turnosNocheUnicos++;
-                        enNocheSemana = true;
+                        enBloqueNS = true;
                     } else if (turno !== 'NS') {
-                        enNocheSemana = false;
+                        enBloqueNS = false;
                     }
                     
-                    if (turno === 'NF' && !enNocheFinde) {
+                    // Detectar inicio de bloque NF
+                    if (turno === 'NF' && !enBloqueNF) {
                         turnosNocheUnicos++;
-                        enNocheFinde = true;
+                        enBloqueNF = true;
                     } else if (turno !== 'NF') {
-                        enNocheFinde = false;
+                        enBloqueNF = false;
                     }
                 }
                 
@@ -859,8 +901,8 @@
             personal.forEach(p => {
                 let dias = 0, tardes = 0, nochesSem = 0, nochesFinde = 0, libres = 0, domingosLibres = 0;
                 let turnosNocheUnicos = 0;
-                let enNocheSemana = false;
-                let enNocheFinde = false;
+                let enBloqueNS = false;
+                let enBloqueNF = false;
                 
                 for (let dia = 0; dia < diasEnMes; dia++) {
                     const turno = calendario[p.nombre][dia];
@@ -871,22 +913,22 @@
                     else if (turno === 'T') tardes++;
                     else if (turno === 'NS') {
                         nochesSem++;
-                        if (!enNocheSemana) {
+                        if (!enBloqueNS) {
                             turnosNocheUnicos++;
-                            enNocheSemana = true;
+                            enBloqueNS = true;
                         }
                     } else if (turno === 'NF') {
                         nochesFinde++;
-                        if (!enNocheFinde) {
+                        if (!enBloqueNF) {
                             turnosNocheUnicos++;
-                            enNocheFinde = true;
+                            enBloqueNF = true;
                         }
                     } else if (turno === 'L') {
                         libres++;
                     }
                     
-                    if (turno !== 'NS') enNocheSemana = false;
-                    if (turno !== 'NF') enNocheFinde = false;
+                    if (turno !== 'NS') enBloqueNS = false;
+                    if (turno !== 'NF') enBloqueNF = false;
                     
                     if (esDomingo && turno === 'L') domingosLibres++;
                 }
@@ -903,7 +945,7 @@
                         <div class="stat-value ${diasOK ? 'success' : 'warning'}">${totalTrabajados} días</div>
                         <div style="font-size: 12px; margin-top: 5px;">
                             Días: ${dias} | Tardes: <span class="${tardesOK ? 'success' : 'warning'}">${tardes}</span><br>
-                            Noches: NS=${nochesSem} NF=${nochesFinde} <br>
+                            Noches: NS=${nochesSem} días, NF=${nochesFinde} días<br>
                             <span class="${nochesOK ? 'success' : 'warning'}">Turnos Noche: ${turnosNocheUnicos}</span><br>
                             Domingos libres: <span class="${domingosOK ? 'success' : 'warning'}">${domingosLibres}</span>
                         </div>
@@ -960,26 +1002,26 @@
                 csv += `${p.nombre}${p.esJefe ? ' (JEFE)' : ''},`;
                 let total = 0;
                 let turnosNocheUnicos = 0;
-                let enNocheSemana = false;
-                let enNocheFinde = false;
+                let enBloqueNS = false;
+                let enBloqueNF = false;
                 
                 for (let dia = 0; dia < diasEnMes; dia++) {
                     const turno = calendario[p.nombre][dia] || '-';
                     csv += `${turno},`;
                     if (turno !== 'L' && turno !== '-') total++;
                     
-                    if (turno === 'NS' && !enNocheSemana) {
+                    if (turno === 'NS' && !enBloqueNS) {
                         turnosNocheUnicos++;
-                        enNocheSemana = true;
+                        enBloqueNS = true;
                     } else if (turno !== 'NS') {
-                        enNocheSemana = false;
+                        enBloqueNS = false;
                     }
                     
-                    if (turno === 'NF' && !enNocheFinde) {
+                    if (turno === 'NF' && !enBloqueNF) {
                         turnosNocheUnicos++;
-                        enNocheFinde = true;
+                        enBloqueNF = true;
                     } else if (turno !== 'NF') {
-                        enNocheFinde = false;
+                        enBloqueNF = false;
                     }
                 }
                 csv += `${total},${turnosNocheUnicos}\n`;
