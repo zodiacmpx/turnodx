@@ -3,1076 +3,542 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generador de Turnos - Despachadores</title>
+    <title>Generador de Turnos Pro - Despachadores</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
+        /* ESTILOS GENERALES */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #f0f2f5;
             padding: 20px;
-            min-height: 100vh;
+            color: #333;
         }
         
         .container {
-            max-width: 1800px;
+            max-width: 100%;
             margin: 0 auto;
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            padding: 20px;
+            overflow-x: hidden;
         }
         
-        h1 {
-            color: #333;
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 2em;
-        }
-        
+        h1 { text-align: center; margin-bottom: 20px; color: #2c3e50; }
+
+        /* CONTROLES */
         .controls {
-            background: #f8f9fa;
+            background: #fff;
             padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-        }
-        
-        .control-group {
-            margin-bottom: 15px;
-        }
-        
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 5px;
-            color: #555;
-        }
-        
-        select, input {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-        
-        button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 15px 30px;
             border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            margin: 10px 5px;
-            transition: transform 0.2s;
-        }
-        
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        
-        button:active {
-            transform: translateY(0);
-        }
-        
-        .calendar-container {
-            overflow-x: auto;
-            margin-top: 30px;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        th, td {
             border: 1px solid #ddd;
-            padding: 12px 8px;
-            text-align: center;
-            font-size: 13px;
-        }
-        
-        th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        
-        tr:nth-child(even) {
-            background: #f8f9fa;
-        }
-        
-        .dia { background: #ffd700; color: #333; font-weight: 600; }
-        .tarde { background: #ff8c00; color: white; font-weight: 600; }
-        .noche-sem { background: #4a5568; color: white; font-weight: 600; }
-        .noche-fds { background: #2d3748; color: white; font-weight: 600; }
-        .libre { background: #90ee90; color: #333; font-weight: 600; }
-        .fijo { border: 3px solid #e74c3c !important; }
-        
-        .domingo { background: #ffe6e6 !important; }
-        
-        td.editable {
-            cursor: pointer;
-            position: relative;
-        }
-        
-        td.editable:hover {
-            opacity: 0.8;
-            box-shadow: inset 0 0 0 2px #667eea;
-        }
-        
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-        }
-        
-        .stat-item {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        
-        .stat-title {
-            font-weight: 600;
-            color: #555;
-            margin-bottom: 5px;
-        }
-        
-        .stat-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: #667eea;
-        }
-        
-        .warning {
-            color: #e74c3c;
-        }
-        
-        .success {
-            color: #27ae60;
-        }
-        
-        .legend {
+            margin-bottom: 20px;
             display: flex;
             flex-wrap: wrap;
             gap: 15px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        
-        .legend-item {
-            display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
         }
         
-        .legend-color {
-            width: 30px;
-            height: 20px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
+        select, input { padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
         
-        .jefe-badge {
+        button {
             background: #3498db;
             color: white;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 10px;
-            margin-left: 5px;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
         }
+        button:hover { background: #2980b9; transform: translateY(-1px); }
+        button.secondary { background: #95a5a6; }
+        button.danger { background: #e74c3c; }
+        button.save { background: #27ae60; }
 
-        .alert-info {
-            background: #d1ecf1;
-            border: 1px solid #bee5eb;
-            color: #0c5460;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+        /* LEYENDA */
+        .legend { display: flex; gap: 15px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap;}
+        .legend-item { display: flex; align-items: center; gap: 5px; font-size: 14px; }
+        .box { width: 20px; height: 20px; border-radius: 3px; border: 1px solid #999; }
+
+        /* CALENDARIO */
+        .table-wrapper { overflow-x: auto; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+            font-size: 13px;
+            position: relative;
         }
         
-        @media print {
-            body {
-                background: white;
-            }
-            .controls, button, .alert-info {
-                display: none;
-            }
+        th { background: #2c3e50; color: white; position: sticky; top: 0; z-index: 10; }
+        
+        /* Columna de nombres fija */
+        td:first-child {
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 5;
+            font-weight: bold;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
         }
+
+        /* ESTILOS DE TURNOS */
+        .dia { background: #ffeaa7; color: #d35400; font-weight: bold; }
+        .tarde { background: #fab1a0; color: #c0392b; font-weight: bold; }
+        .noche-sem { background: #74b9ff; color: #0984e3; font-weight: bold; } /* Azul claro */
+        .noche-fds { background: #0984e3; color: white; font-weight: bold; } /* Azul fuerte */
+        .libre { background: #55efc4; color: #00b894; font-weight: bold; }
+        .domingo { background-color: #ffe6e6 !important; }
+
+        /* ESTADO FIJO / BLOQUEADO */
+        td.fijo {
+            border: 2px solid #e74c3c !important;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+        }
+        
+        td.fijo::after {
+            content: '🔒';
+            position: absolute;
+            top: 0px;
+            right: 0px;
+            font-size: 10px;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            padding: 1px;
+        }
+
+        td.editable { cursor: pointer; user-select: none; }
+        td.editable:hover { filter: brightness(0.95); }
+
+        /* BADGES */
+        .badge { font-size: 10px; padding: 2px 4px; border-radius: 3px; color: white; margin-left: 5px; }
+        .badge-jefe { background: #8e44ad; }
+
+        /* ALERTAS */
+        .alert { padding: 10px; background: #d1ecf1; color: #0c5460; border-radius: 5px; margin-bottom: 15px; text-align: center;}
     </style>
 </head>
 <body>
+
     <div class="container">
-        <h1>🗓️ Generador de Turnos - Sistema de Despacho</h1>
-        
-        <div class="alert-info">
-            <strong>ℹ️ Turnos de Noche:</strong> Noche Semana = Lun-Mar-Mié-Jue (4 días consecutivos) | Noche Fin de Semana = Vie-Sáb-Dom (3 días consecutivos) | 3 días libres después | Máximo 1 turno de noche por despachador/mes
+        <h1>🗓️ Generador de Turnos Inteligente</h1>
+
+        <div class="alert">
+            <strong>Instrucciones:</strong> Clic izquierdo para cambiar turno manual. <strong>Clic derecho para BLOQUEAR (🔒)</strong> y proteger el turno del generador automático.
         </div>
-        
+
         <div class="controls">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
-                <div class="control-group">
-                    <label>Mes:</label>
-                    <select id="mes">
-                        <option value="0">Enero</option>
-                        <option value="1">Febrero</option>
-                        <option value="2">Marzo</option>
-                        <option value="3">Abril</option>
-                        <option value="4">Mayo</option>
-                        <option value="5">Junio</option>
-                        <option value="6">Julio</option>
-                        <option value="7">Agosto</option>
-                        <option value="8">Septiembre</option>
-                        <option value="9">Octubre</option>
-                        <option value="10">Noviembre</option>
-                        <option value="11">Diciembre</option>
-                    </select>
-                </div>
-                <div class="control-group">
-                    <label>Año:</label>
-                    <input type="number" id="anio" value="2025" min="2024" max="2030">
-                </div>
+            <div>
+                <label>Mes:</label>
+                <select id="mes">
+                    <option value="0">Enero</option>
+                    <option value="1">Febrero</option>
+                    <option value="2">Marzo</option>
+                    <option value="3">Abril</option>
+                    <option value="4">Mayo</option>
+                    <option value="5">Junio</option>
+                    <option value="6">Julio</option>
+                    <option value="7">Agosto</option>
+                    <option value="8">Septiembre</option>
+                    <option value="9">Octubre</option>
+                    <option value="10">Noviembre</option>
+                    <option value="11">Diciembre</option>
+                </select>
+                <input type="number" id="anio" value="2025" style="width: 80px;">
             </div>
-            
-            <div style="margin-top: 20px; text-align: center;">
-                <button onclick="generarTurnos()">🔄 Generar Turnos Automáticamente</button>
-                <button onclick="exportarExcel()">📊 Exportar a Excel</button>
-                <button onclick="window.print()">🖨️ Imprimir</button>
-                <button onclick="guardarEstado()">💾 Guardar Estado</button>
-                <button onclick="cargarEstado()">📂 Cargar Estado</button>
-            </div>
+
+            <button onclick="generarTurnos()" title="Respeta los candados">⚡ Generar Automático</button>
+            <button class="secondary" onclick="limpiarTablero(false)">🧹 Limpiar (Mantener Candados)</button>
+            <button class="danger" onclick="limpiarTablero(true)">🗑️ Borrar Todo</button>
+            <button class="save" onclick="guardarLocal()">💾 Guardar</button>
+            <button class="save" onclick="cargarLocal()">📂 Cargar</button>
+            <button onclick="exportarCSV()">📊 Excel</button>
         </div>
-        
+
         <div class="legend">
-            <div class="legend-item">
-                <div class="legend-color dia"></div>
-                <span>Día (D)</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color tarde"></div>
-                <span>Tarde (T)</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color noche-sem"></div>
-                <span>Noche Semana (NS) - Lun-Jue</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color noche-fds"></div>
-                <span>Noche Fin de Semana (NF) - Vie-Dom</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color libre"></div>
-                <span>Libre (L)</span>
-            </div>
-            <div class="legend-item">
-                <div style="width: 30px; height: 20px; border: 3px solid #e74c3c; border-radius: 4px;"></div>
-                <span>Día Fijo</span>
-            </div>
+            <div class="legend-item"><div class="box dia"></div> Día (D)</div>
+            <div class="legend-item"><div class="box tarde"></div> Tarde (T)</div>
+            <div class="legend-item"><div class="box noche-sem"></div> Noche Sem (NS)</div>
+            <div class="legend-item"><div class="box noche-fds"></div> Noche Finde (NF)</div>
+            <div class="legend-item"><div class="box libre"></div> Libre (L)</div>
+            <div class="legend-item"><div class="box" style="border: 2px solid #e74c3c; position:relative;"></div> <span style="font-size:12px">🔒 Bloqueado</span></div>
         </div>
-        
-        <div class="calendar-container">
-            <table id="calendario">
-                <thead id="calendario-head"></thead>
-                <tbody id="calendario-body"></tbody>
+
+        <div class="table-wrapper">
+            <table id="tabla-turnos">
+                <thead>
+                    <tr id="header-row"></tr>
+                </thead>
+                <tbody id="body-rows"></tbody>
             </table>
         </div>
-        
-        <div class="stats" id="estadisticas"></div>
+
+        <div id="stats" style="margin-top: 20px; padding: 10px; background: #eee; border-radius: 5px;"></div>
     </div>
 
     <script>
-        // Configuración de despachadores y jefes
-        const despachadores = [
-            { nombre: 'Omar Bastidas', zona: 'Valdivia', prioridad: 1, esJefe: false },
-            { nombre: 'Jonathan Molina', zona: 'Valdivia', prioridad: 2, esJefe: false },
-            { nombre: 'Brayan Carrillo', zona: 'Valdivia', prioridad: 3, esJefe: false },
-            { nombre: 'Claudio Cheuquian', zona: 'Osorno', prioridad: 1, esJefe: false },
-            { nombre: 'Esteban Gómez', zona: 'Osorno', prioridad: 2, esJefe: false },
-            { nombre: 'Víctor Millár', zona: 'Osorno', prioridad: 3, esJefe: false },
-            { nombre: 'Omar Millaguín', zona: 'Puertumont', prioridad: 1, esJefe: false },
-            { nombre: 'Victor González', zona: 'Puertumont', prioridad: 2, esJefe: false },
-            { nombre: 'Sebastián Fernández', zona: 'Puertumont', prioridad: 3, esJefe: false },
-            { nombre: 'Claudio Bustos', zona: 'Chiloé', prioridad: 1, esJefe: false },
-            { nombre: 'Isabel Alvarado', zona: 'Chiloé', prioridad: 2, esJefe: false },
-            { nombre: 'René Asenjo', zona: 'Chiloé', prioridad: 3, esJefe: false },
-            { nombre: 'Felipe Báez', zona: 'Chiloé', prioridad: 4, esJefe: false },
-            { nombre: 'Emanuel Contreras', zona: 'Chiloé', prioridad: 5, esJefe: false },
-            { nombre: 'Ruth Millár', zona: 'Chiloé', prioridad: 6, esJefe: false }
+        // === CONFIGURACIÓN ===
+        const personal = [
+            { nombre: 'Omar Bastidas', zona: 'Valdivia', esJefe: false },
+            { nombre: 'Jonathan Molina', zona: 'Valdivia', esJefe: false },
+            { nombre: 'Brayan Carrillo', zona: 'Valdivia', esJefe: false },
+            { nombre: 'Claudio Cheuquian', zona: 'Osorno', esJefe: false },
+            { nombre: 'Esteban Gómez', zona: 'Osorno', esJefe: false },
+            { nombre: 'Víctor Millár', zona: 'Osorno', esJefe: false },
+            { nombre: 'Omar Millaguín', zona: 'Puertumont', esJefe: false },
+            { nombre: 'Victor González', zona: 'Puertumont', esJefe: false },
+            { nombre: 'Sebastián Fernández', zona: 'Puertumont', esJefe: false },
+            { nombre: 'Claudio Bustos', zona: 'Chiloé', esJefe: false },
+            { nombre: 'Isabel Alvarado', zona: 'Chiloé', esJefe: false },
+            { nombre: 'René Asenjo', zona: 'Chiloé', esJefe: false },
+            { nombre: 'Felipe Báez', zona: 'Chiloé', esJefe: false },
+            { nombre: 'Emanuel Contreras', zona: 'Chiloé', esJefe: false },
+            { nombre: 'Ruth Millár', zona: 'Chiloé', esJefe: false },
+            { nombre: 'Jefe 1', zona: 'Jefatura', esJefe: true },
+            { nombre: 'Jefe 2', zona: 'Jefatura', esJefe: true },
+            { nombre: 'Jefe 3', zona: 'Jefatura', esJefe: true }
         ];
 
-        const jefes = [
-            { nombre: 'Jefe 1', esJefe: true },
-            { nombre: 'Jefe 2', esJefe: true },
-            { nombre: 'Jefe 3', esJefe: true },
-            { nombre: 'Jefe 4', esJefe: true }
-        ];
+        // Estado Global
+        let calendario = {}; // { "Nombre": ["D", "T", null, ...] }
+        let diasBloqueados = {}; // { "Nombre": { 0: "D", 5: "L" } } -> Índices de días fijos
 
-        const personal = [...despachadores, ...jefes];
-        
-        let calendario = {};
-        let diasFijos = {};
+        // === INICIALIZACIÓN ===
+        window.onload = () => {
+            const fecha = new Date();
+            document.getElementById('mes').value = fecha.getMonth();
+            document.getElementById('anio').value = fecha.getFullYear();
+            inicializarEstructura();
+            renderizar();
+        };
 
-        function inicializarCalendario() {
-            const mes = parseInt(document.getElementById('mes').value);
-            const anio = parseInt(document.getElementById('anio').value);
-            const diasEnMes = new Date(anio, mes + 1, 0).getDate();
-            
+        function getDiasMes() {
+            const m = parseInt(document.getElementById('mes').value);
+            const a = parseInt(document.getElementById('anio').value);
+            return new Date(a, m + 1, 0).getDate();
+        }
+
+        function inicializarEstructura() {
+            const totalDias = getDiasMes();
             calendario = {};
+            // Si no existen bloqueos previos, inicializamos vacío, si existen se mantienen
+            if(!diasBloqueados) diasBloqueados = {}; 
+
             personal.forEach(p => {
-                calendario[p.nombre] = Array(diasEnMes).fill(null);
+                calendario[p.nombre] = new Array(totalDias).fill(null);
+                // Asegurar que exista la entrada en bloqueados
+                if (!diasBloqueados[p.nombre]) diasBloqueados[p.nombre] = {};
             });
         }
 
-        function generarEncabezado() {
-            const mes = parseInt(document.getElementById('mes').value);
-            const anio = parseInt(document.getElementById('anio').value);
-            const diasEnMes = new Date(anio, mes + 1, 0).getDate();
-            
-            let html = '<tr><th>Nombre</th>';
+        // === RENDERIZADO ===
+        function renderizar() {
+            const m = parseInt(document.getElementById('mes').value);
+            const a = parseInt(document.getElementById('anio').value);
+            const totalDias = getDiasMes();
             const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-            
-            for (let dia = 1; dia <= diasEnMes; dia++) {
-                const fecha = new Date(anio, mes, dia);
-                const diaSemana = diasSemana[fecha.getDay()];
-                const esDomingo = fecha.getDay() === 0;
-                html += `<th class="${esDomingo ? 'domingo' : ''}">${dia}<br>${diaSemana}</th>`;
-            }
-            html += '<th>Total Días</th><th>Turnos Noche</th></tr>';
-            
-            document.getElementById('calendario-head').innerHTML = html;
-        }
 
-        function encontrarBloquesNoche(mes, anio, diasEnMes) {
-            let bloques = {
-                nocheSemana: [],
-                nocheFinde: []
-            };
-            
-            let i = 0;
-            while (i < diasEnMes) {
-                const fecha = new Date(anio, mes, i);
-                const diaSemana = fecha.getDay();
-                
-                // Buscar bloques de Noche Semana: Lun-Mar-Mié-Jue
-                if (diaSemana === 1) { // Lunes
-                    let bloque = [];
-                    let j = i;
-                    
-                    // Verificar que sean 4 días consecutivos: Lun, Mar, Mié, Jue
-                    for (let k = 0; k < 4; k++) {
-                        if (j + k < diasEnMes) {
-                            const fechaTemp = new Date(anio, mes, j + k);
-                            const diaTemp = fechaTemp.getDay();
-                            
-                            // Debe ser lunes(1), martes(2), miércoles(3), jueves(4)
-                            if (diaTemp === 1 + k) {
-                                bloque.push(j + k);
-                            } else {
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (bloque.length === 4) {
-                        bloques.nocheSemana.push(bloque);
-                    }
-                }
-                
-                // Buscar bloques de Noche Fin de Semana: Vie-Sáb-Dom
-                if (diaSemana === 5) { // Viernes
-                    let bloque = [];
-                    let j = i;
-                    
-                    // Verificar que sean 3 días consecutivos: Vie, Sáb, Dom
-                    for (let k = 0; k < 3; k++) {
-                        if (j + k < diasEnMes) {
-                            const fechaTemp = new Date(anio, mes, j + k);
-                            const diaTemp = fechaTemp.getDay();
-                            
-                            // Debe ser viernes(5), sábado(6), domingo(0)
-                            if ((k === 0 && diaTemp === 5) || 
-                                (k === 1 && diaTemp === 6) || 
-                                (k === 2 && diaTemp === 0)) {
-                                bloque.push(j + k);
-                            } else {
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (bloque.length === 3) {
-                        bloques.nocheFinde.push(bloque);
-                    }
-                }
-                
-                i++;
+            // 1. Header
+            let headerHTML = '<th>Personal</th>';
+            for (let i = 1; i <= totalDias; i++) {
+                const fecha = new Date(a, m, i);
+                const diaSem = diasSemana[fecha.getDay()];
+                const claseDom = fecha.getDay() === 0 ? 'domingo' : '';
+                headerHTML += `<th class="${claseDom}">${i}<br>${diaSem}</th>`;
             }
-            
-            return bloques;
-        }
+            headerHTML += '<th>Total</th>';
+            document.getElementById('header-row').innerHTML = headerHTML;
 
-        function asignarTurnosNoche(mes, anio, diasEnMes) {
-            const bloques = encontrarBloquesNoche(mes, anio, diasEnMes);
-            const turnosNochePorPersona = {};
-            
-            despachadores.forEach(d => turnosNochePorPersona[d.nombre] = 0);
-            
-            // Mezclar despachadores para variedad
-            const despMezclados = [...despachadores].sort(() => Math.random() - 0.5);
-            
-            // Asignar bloques de Noche Semana (Lun-Jue)
-            bloques.nocheSemana.forEach(bloque => {
-                let asignado = false;
-                
-                for (let desp of despMezclados) {
-                    // Solo si no tiene turno de noche aún
-                    if (turnosNochePorPersona[desp.nombre] === 0) {
-                        let puedeAsignar = true;
-                        
-                        // Verificar que todos los días del bloque + 3 de descanso estén libres
-                        const diasTotales = [...bloque];
-                        for (let i = 1; i <= 3; i++) {
-                            const diaDescanso = bloque[bloque.length - 1] + i;
-                            if (diaDescanso < diasEnMes) {
-                                diasTotales.push(diaDescanso);
-                            }
-                        }
-                        
-                        // Verificar días fijos
-                        for (let dia of diasTotales) {
-                            if (calendario[desp.nombre][dia] !== null) {
-                                puedeAsignar = false;
-                                break;
-                            }
-                        }
-                        
-                        if (puedeAsignar) {
-                            // Asignar el bloque completo de noche
-                            bloque.forEach(dia => {
-                                calendario[desp.nombre][dia] = 'NS';
-                            });
-                            
-                            // Asignar 3 días libres después
-                            for (let i = 1; i <= 3; i++) {
-                                const diaLibre = bloque[bloque.length - 1] + i;
-                                if (diaLibre < diasEnMes) {
-                                    calendario[desp.nombre][diaLibre] = 'L';
-                                }
-                            }
-                            
-                            turnosNochePorPersona[desp.nombre]++;
-                            asignado = true;
-                            break;
-                        }
-                    }
-                }
-            });
-            
-            // Asignar bloques de Noche Fin de Semana (Vie-Dom)
-            bloques.nocheFinde.forEach(bloque => {
-                let asignado = false;
-                
-                for (let desp of despMezclados) {
-                    // Solo si no tiene turno de noche aún
-                    if (turnosNochePorPersona[desp.nombre] === 0) {
-                        let puedeAsignar = true;
-                        
-                        // Verificar que todos los días del bloque + 3 de descanso estén libres
-                        const diasTotales = [...bloque];
-                        for (let i = 1; i <= 3; i++) {
-                            const diaDescanso = bloque[bloque.length - 1] + i;
-                            if (diaDescanso < diasEnMes) {
-                                diasTotales.push(diaDescanso);
-                            }
-                        }
-                        
-                        // Verificar días fijos
-                        for (let dia of diasTotales) {
-                            if (calendario[desp.nombre][dia] !== null) {
-                                puedeAsignar = false;
-                                break;
-                            }
-                        }
-                        
-                        if (puedeAsignar) {
-                            // Asignar el bloque completo de noche
-                            bloque.forEach(dia => {
-                                calendario[desp.nombre][dia] = 'NF';
-                            });
-                            
-                            // Asignar 3 días libres después
-                            for (let i = 1; i <= 3; i++) {
-                                const diaLibre = bloque[bloque.length - 1] + i;
-                                if (diaLibre < diasEnMes) {
-                                    calendario[desp.nombre][diaLibre] = 'L';
-                                }
-                            }
-                            
-                            turnosNochePorPersona[desp.nombre]++;
-                            asignado = true;
-                            break;
-                        }
-                    }
-                }
-            });
-            
-            console.log('Turnos de noche asignados:', turnosNochePorPersona);
-        }
-
-        function generarTurnos() {
-            inicializarCalendario();
-            
-            const mes = parseInt(document.getElementById('mes').value);
-            const anio = parseInt(document.getElementById('anio').value);
-            const diasEnMes = new Date(anio, mes + 1, 0).getDate();
-            
-            // Aplicar días fijos primero
-            for (let persona in diasFijos) {
-                for (let dia in diasFijos[persona]) {
-                    calendario[persona][parseInt(dia)] = diasFijos[persona][dia];
-                }
-            }
-            
-            // PRIMERO: Asignar turnos de noche (tienen prioridad)
-            asignarTurnosNoche(mes, anio, diasEnMes);
-            
-            // SEGUNDO: Completar con turnos de día y tarde para despachadores
-            despachadores.forEach(desp => {
-                completarTurnosDespachador(desp.nombre, diasEnMes, mes, anio);
-            });
-            
-            // TERCERO: Generar turnos para jefes
-            jefes.forEach(jefe => {
-                generarTurnoJefe(jefe.nombre, diasEnMes, mes, anio);
-            });
-            
-            // CUARTO: Optimizar distribución
-            optimizarDistribucion(diasEnMes, mes, anio);
-            
-            renderizarCalendario();
-            mostrarEstadisticas();
-        }
-
-        function completarTurnosDespachador(nombre, diasEnMes, mes, anio) {
-            let diasTrabajados = 0;
-            let diasConsecutivos = 0;
-            let ultimoDiaLibre = -3;
-            let domingosTrabajados = 0;
-            let tardesAsignadas = 0;
-            
-            // Contar días ya asignados (noches y fijos)
-            for (let dia = 0; dia < diasEnMes; dia++) {
-                if (calendario[nombre][dia] && calendario[nombre][dia] !== 'L') {
-                    diasTrabajados++;
-                    if (calendario[nombre][dia] === 'T') tardesAsignadas++;
-                    if (calendario[nombre][dia] === 'NS' || calendario[nombre][dia] === 'NF') {
-                        const fecha = new Date(anio, mes, dia);
-                        if (fecha.getDay() === 0) domingosTrabajados++;
-                    }
-                }
-            }
-            
-            for (let dia = 0; dia < diasEnMes; dia++) {
-                // Si ya tiene algo asignado, actualizar contadores
-                if (calendario[nombre][dia] !== null) {
-                    if (calendario[nombre][dia] === 'L') {
-                        diasConsecutivos = 0;
-                        ultimoDiaLibre = dia;
-                    } else {
-                        diasConsecutivos++;
-                    }
-                    continue;
-                }
-                
-                const fecha = new Date(anio, mes, dia);
-                const diaSemana = fecha.getDay();
-                const esDomingo = diaSemana === 0;
-                
-                // Regla: mínimo 2 días libres por semana
-                const necesitaDescanso = (dia - ultimoDiaLibre >= 5) || (diasConsecutivos >= 6);
-                
-                // Regla: máximo 2 domingos trabajados al mes
-                if (esDomingo && domingosTrabajados >= 2) {
-                    calendario[nombre][dia] = 'L';
-                    diasConsecutivos = 0;
-                    ultimoDiaLibre = dia;
-                    continue;
-                }
-                
-                if (necesitaDescanso) {
-                    calendario[nombre][dia] = 'L';
-                    diasConsecutivos = 0;
-                    ultimoDiaLibre = dia;
-                    continue;
-                }
-                
-                // Asignar turno
-                if (diasTrabajados >= 23) {
-                    calendario[nombre][dia] = 'L';
-                    diasConsecutivos = 0;
-                    ultimoDiaLibre = dia;
-                } else {
-                    // Lógica de asignación: priorizar día y tarde
-                    const rand = Math.random();
-                    let turno;
-                    
-                    if (tardesAsignadas < 6) {
-                        turno = rand < 0.4 ? 'T' : 'D';
-                        if (turno === 'T') tardesAsignadas++;
-                    } else if (tardesAsignadas > 9) {
-                        turno = 'D';
-                    } else {
-                        turno = rand < 0.3 ? 'T' : 'D';
-                        if (turno === 'T') tardesAsignadas++;
-                    }
-                    
-                    calendario[nombre][dia] = turno;
-                    diasTrabajados++;
-                    diasConsecutivos++;
-                    
-                    if (esDomingo) domingosTrabajados++;
-                }
-            }
-        }
-
-        function generarTurnoJefe(nombre, diasEnMes, mes, anio) {
-            let diasTrabajados = 0;
-            let diasConsecutivos = 0;
-            let ultimoDiaLibre = -3;
-            
-            for (let dia = 0; dia < diasEnMes; dia++) {
-                if (calendario[nombre][dia] !== null) {
-                    if (calendario[nombre][dia] === 'L') {
-                        diasConsecutivos = 0;
-                        ultimoDiaLibre = dia;
-                    } else {
-                        diasConsecutivos++;
-                    }
-                    continue;
-                }
-                
-                const necesitaDescanso = (dia - ultimoDiaLibre >= 5) || (diasConsecutivos >= 6);
-                
-                if (necesitaDescanso || diasTrabajados >= 23) {
-                    calendario[nombre][dia] = 'L';
-                    diasConsecutivos = 0;
-                    ultimoDiaLibre = dia;
-                } else {
-                    // Jefes solo trabajan día o tarde
-                    const rand = Math.random();
-                    calendario[nombre][dia] = rand < 0.7 ? 'D' : 'T';
-                    diasTrabajados++;
-                    diasConsecutivos++;
-                }
-            }
-        }
-
-        function optimizarDistribucion(diasEnMes, mes, anio) {
-            // Asegurar mínimos por turno
-            for (let dia = 0; dia < diasEnMes; dia++) {
-                let contadores = { D: 0, T: 0, NS: 0, NF: 0 };
-                let jefesEnDia = 0;
-                let jefesEnTarde = 0;
-                
-                personal.forEach(p => {
-                    const turno = calendario[p.nombre][dia];
-                    if (turno && turno !== 'L') {
-                        contadores[turno] = (contadores[turno] || 0) + 1;
-                        if (p.esJefe) {
-                            if (turno === 'D') jefesEnDia++;
-                            if (turno === 'T') jefesEnTarde++;
-                        }
-                    }
-                });
-                
-                // Ajustar si no se cumplen mínimos
-                if (contadores.D < 5) {
-                    let ajustados = 0;
-                    for (let p of despachadores) {
-                        if (calendario[p.nombre][dia] === 'L' && ajustados < (5 - contadores.D)) {
-                            calendario[p.nombre][dia] = 'D';
-                            ajustados++;
-                        }
-                    }
-                }
-                
-                if (contadores.T < 3) {
-                    let ajustados = 0;
-                    for (let p of despachadores) {
-                        if ((calendario[p.nombre][dia] === 'D' || calendario[p.nombre][dia] === 'L') && 
-                            ajustados < (3 - contadores.T)) {
-                            calendario[p.nombre][dia] = 'T';
-                            ajustados++;
-                        }
-                    }
-                }
-                
-                // Ajustar jefes: siempre 1 en tarde
-                if (jefesEnTarde === 0) {
-                    for (let jefe of jefes) {
-                        if (calendario[jefe.nombre][dia] === 'D') {
-                            calendario[jefe.nombre][dia] = 'T';
-                            break;
-                        }
-                    }
-                } else if (jefesEnTarde > 1) {
-                    let cambios = 0;
-                    for (let jefe of jefes) {
-                        if (calendario[jefe.nombre][dia] === 'T' && cambios < jefesEnTarde - 1) {
-                            calendario[jefe.nombre][dia] = 'D';
-                            cambios++;
-                        }
-                    }
-                }
-            }
-        }
-
-        function renderizarCalendario() {
-            const mes = parseInt(document.getElementById('mes').value);
-            const anio = parseInt(document.getElementById('anio').value);
-            const diasEnMes = new Date(anio, mes + 1, 0).getDate();
-            
-            let html = '';
+            // 2. Body
+            let bodyHTML = '';
             personal.forEach(p => {
-                html += `<tr><td style="font-weight: 600; text-align: left; position: sticky; left: 0; background: white; z-index: 5;">
-                    ${p.nombre}${p.esJefe ? '<span class="jefe-badge">JEFE</span>' : ''}
-                </td>`;
+                let row = `<tr>`;
+                row += `<td>${p.nombre} ${p.esJefe ? '<span class="badge badge-jefe">JEFE</span>' : ''}</td>`;
                 
-                let diasTrabajados = 0;
-                
-                for (let dia = 0; dia < diasEnMes; dia++) {
-                    const turno = calendario[p.nombre][dia] || '-';
-                    const esFijo = diasFijos[p.nombre] && diasFijos[p.nombre][dia];
-                    const fecha = new Date(anio, mes, dia);
-                    const esDomingo = fecha.getDay() === 0;
+                let countTrabajo = 0;
+
+                for (let i = 0; i < totalDias; i++) {
+                    const turno = calendario[p.nombre][i] || '';
+                    const esBloqueado = diasBloqueados[p.nombre][i] !== undefined;
                     
+                    // Clase CSS según turno
                     let clase = '';
-                    let texto = turno;
-                    
                     if (turno === 'D') clase = 'dia';
                     else if (turno === 'T') clase = 'tarde';
                     else if (turno === 'NS') clase = 'noche-sem';
                     else if (turno === 'NF') clase = 'noche-fds';
                     else if (turno === 'L') clase = 'libre';
                     
-                    if (turno !== 'L' && turno !== '-') diasTrabajados++;
-                    
-                    html += `<td class="editable ${clase} ${esFijo ? 'fijo' : ''} ${esDomingo ? 'domingo' : ''}" 
-                             onclick="cambiarTurno('${p.nombre}', ${dia})"
-                             oncontextmenu="fijarDia(event, '${p.nombre}', ${dia}); return false;"
-                             title="Click: cambiar turno | Click derecho: fijar/liberar">
-                        ${texto}
-                    </td>`;
+                    if (esBloqueado) clase += ' fijo';
+
+                    const fecha = new Date(a, m, i+1);
+                    if (fecha.getDay() === 0) clase += ' domingo';
+
+                    if (turno && turno !== 'L') countTrabajo++;
+
+                    row += `<td class="editable ${clase}" 
+                                onclick="ciclarTurno('${p.nombre}', ${i})" 
+                                oncontextmenu="toggleBloqueo(event, '${p.nombre}', ${i})">
+                                ${turno}
+                            </td>`;
                 }
                 
-                // Contar turnos de noche únicos (bloques, no días)
-                let turnosNocheUnicos = 0;
-                let enBloqueNS = false;
-                let enBloqueNF = false;
-                
-                for (let dia = 0; dia < diasEnMes; dia++) {
-                    const turno = calendario[p.nombre][dia];
-                    
-                    // Detectar inicio de bloque NS
-                    if (turno === 'NS' && !enBloqueNS) {
-                        turnosNocheUnicos++;
-                        enBloqueNS = true;
-                    } else if (turno !== 'NS') {
-                        enBloqueNS = false;
-                    }
-                    
-                    // Detectar inicio de bloque NF
-                    if (turno === 'NF' && !enBloqueNF) {
-                        turnosNocheUnicos++;
-                        enBloqueNF = true;
-                    } else if (turno !== 'NF') {
-                        enBloqueNF = false;
-                    }
-                }
-                
-                html += `<td style="font-weight: 700; background: ${diasTrabajados < 19 || diasTrabajados > 23 ? '#ffcccb' : '#d4edda'};">
-                    ${diasTrabajados}
-                </td>
-                <td style="font-weight: 700; background: ${turnosNocheUnicos > 1 ? '#ffcccb' : '#d4edda'};">
-                    ${turnosNocheUnicos}
-                </td></tr>`;
+                row += `<td><strong>${countTrabajo}</strong></td></tr>`;
+                bodyHTML += row;
             });
-            
-            document.getElementById('calendario-body').innerHTML = html;
+            document.getElementById('body-rows').innerHTML = bodyHTML;
+            actualizarEstadisticas();
         }
 
-        function cambiarTurno(nombre, dia) {
-            const turnos = ['D', 'T', 'NS', 'NF', 'L', '-'];
-            const actual = calendario[nombre][dia] || '-';
-            const indice = turnos.indexOf(actual);
-            const siguiente = turnos[(indice + 1) % turnos.length];
+        // === INTERACCIÓN MANUAL ===
+        function ciclarTurno(nombre, diaIndex) {
+            // Si está bloqueado, preguntar o impedir. Aquí permitimos cambiar pero mantiene el bloqueo.
+            // Opcional: if (diasBloqueados[nombre][diaIndex]) return; 
             
-            calendario[nombre][dia] = siguiente === '-' ? null : siguiente;
-            renderizarCalendario();
-            mostrarEstadisticas();
-        }
+            const turnos = [null, 'D', 'T', 'NS', 'NF', 'L'];
+            const actual = calendario[nombre][diaIndex];
+            let nuevoIdx = (turnos.indexOf(actual) + 1) % turnos.length;
+            const nuevoTurno = turnos[nuevoIdx];
 
-        function fijarDia(event, nombre, dia) {
-            event.preventDefault();
-            if (!diasFijos[nombre]) diasFijos[nombre] = {};
+            calendario[nombre][diaIndex] = nuevoTurno;
             
-            if (diasFijos[nombre][dia]) {
-                delete diasFijos[nombre][dia];
-                alert(`✅ Día ${dia + 1} liberado para ${nombre}`);
-            } else {
-                const turnoActual = calendario[nombre][dia];
-                if (turnoActual && turnoActual !== '-') {
-                    diasFijos[nombre][dia] = turnoActual;
-                    alert(`🔒 Día ${dia + 1} fijado para ${nombre} con turno: ${turnoActual}`);
-                } else {
-                    alert(`⚠️ Primero asigna un turno a este día`);
-                }
+            // Si estaba bloqueado, actualizamos el valor guardado en el bloqueo
+            if (diasBloqueados[nombre][diaIndex] !== undefined) {
+                diasBloqueados[nombre][diaIndex] = nuevoTurno;
             }
-            
-            renderizarCalendario();
+
+            renderizar();
         }
 
-        function mostrarEstadisticas() {
-            const mes = parseInt(document.getElementById('mes').value);
-            const anio = parseInt(document.getElementById('anio').value);
-            const diasEnMes = new Date(anio, mes + 1, 0).getDate();
+        function toggleBloqueo(e, nombre, diaIndex) {
+            e.preventDefault(); // Evitar menú contextual del navegador
             
-            let stats = '<h2 style="grid-column: 1/-1; margin-bottom: 10px;">📊 Estadísticas del Mes</h2>';
+            const turnoActual = calendario[nombre][diaIndex];
             
-            // Estadísticas por día
-            let statsPorDia = '<div class="stat-item" style="grid-column: 1/-1;"><div class="stat-title">Cobertura por Día</div><div style="font-size: 12px; margin-top: 10px;">';
-            
-            for (let dia = 0; dia < diasEnMes; dia++) {
-                let contadores = { D: 0, T: 0, NS: 0, NF: 0 };
-                let jefesD = 0, jefesT = 0;
+            if (diasBloqueados[nombre][diaIndex] !== undefined) {
+                // Desbloquear
+                delete diasBloqueados[nombre][diaIndex];
+            } else {
+                // Bloquear (solo si hay un turno asignado, o permitir bloquear vacíos como Libres?)
+                // Asumiremos que si está vacío (null) y se bloquea, se fuerza a 'L' o se queda vacío protegido.
+                // Para simplificar, si es null lo convertimos a algo visible o lo dejamos null protegido.
+                diasBloqueados[nombre][diaIndex] = turnoActual;
+            }
+            renderizar();
+        }
+
+        function limpiarTablero(borrarTodo) {
+            if(confirm(borrarTodo ? "¿Borrar TODO incluyendo bloqueos?" : "¿Limpiar solo celdas no bloqueadas?")) {
+                const totalDias = getDiasMes();
                 
+                if (borrarTodo) {
+                    diasBloqueados = {};
+                    personal.forEach(p => diasBloqueados[p.nombre] = {});
+                }
+
                 personal.forEach(p => {
-                    const turno = calendario[p.nombre][dia];
-                    if (turno && turno !== 'L') {
-                        contadores[turno] = (contadores[turno] || 0) + 1;
-                        if (p.esJefe) {
-                            if (turno === 'D') jefesD++;
-                            if (turno === 'T') jefesT++;
+                    for(let i=0; i<totalDias; i++) {
+                        // Si NO borrarTodo y la celda está en bloqueados, la saltamos (la preservamos)
+                        if (!borrarTodo && diasBloqueados[p.nombre][i] !== undefined) {
+                            calendario[p.nombre][i] = diasBloqueados[p.nombre][i];
+                        } else {
+                            calendario[p.nombre][i] = null;
                         }
                     }
                 });
-                
-                const fecha = new Date(anio, mes, dia);
-                const diaSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][fecha.getDay()];
-                
-                const diaOK = contadores.D >= 5;
-                const tardeOK = contadores.T >= 3;
-                const jefesDOK = jefesD >= 1 && jefesD <= 3;
-                const jefesTOK = jefesT === 1;
-                
-                const todoOK = diaOK && tardeOK && jefesDOK && jefesTOK;
-                
-                statsPorDia += `<span style="color: ${todoOK ? '#27ae60' : '#e74c3c'}; margin-right: 15px;">
-                    ${dia + 1} (${diaSemana}): D=${contadores.D}(J:${jefesD}) T=${contadores.T}(J:${jefesT}) NS=${contadores.NS} NF=${contadores.NF}
-                </span>`;
-                
-                if ((dia + 1) % 7 === 0) statsPorDia += '<br>';
+                renderizar();
             }
+        }
+
+        // === LÓGICA DEL GENERADOR ===
+        function generarTurnos() {
+            // 1. Limpiar tablero respetando bloqueos
+            limpiarTablero(false); // Llama a la limpieza interna sin confirmación visual explícita aquí
             
-            statsPorDia += '</div></div>';
-            stats += statsPorDia;
-            
-            // Estadísticas por persona
+            const totalDias = getDiasMes();
+            const m = parseInt(document.getElementById('mes').value);
+            const a = parseInt(document.getElementById('anio').value);
+
+            // 2. Aplicar bloqueos explícitamente (redundancia de seguridad)
             personal.forEach(p => {
-                let dias = 0, tardes = 0, nochesSem = 0, nochesFinde = 0, libres = 0, domingosLibres = 0;
-                let turnosNocheUnicos = 0;
-                let enBloqueNS = false;
-                let enBloqueNF = false;
-                
-                for (let dia = 0; dia < diasEnMes; dia++) {
-                    const turno = calendario[p.nombre][dia];
-                    const fecha = new Date(anio, mes, dia);
-                    const esDomingo = fecha.getDay() === 0;
-                    
-                    if (turno === 'D') dias++;
-                    else if (turno === 'T') tardes++;
-                    else if (turno === 'NS') {
-                        nochesSem++;
-                        if (!enBloqueNS) {
-                            turnosNocheUnicos++;
-                            enBloqueNS = true;
-                        }
-                    } else if (turno === 'NF') {
-                        nochesFinde++;
-                        if (!enBloqueNF) {
-                            turnosNocheUnicos++;
-                            enBloqueNF = true;
-                        }
-                    } else if (turno === 'L') {
-                        libres++;
-                    }
-                    
-                    if (turno !== 'NS') enBloqueNS = false;
-                    if (turno !== 'NF') enBloqueNF = false;
-                    
-                    if (esDomingo && turno === 'L') domingosLibres++;
+                for (const [dia, turno] of Object.entries(diasBloqueados[p.nombre])) {
+                    calendario[p.nombre][parseInt(dia)] = turno;
                 }
-                
-                const totalTrabajados = dias + tardes + nochesSem + nochesFinde;
-                const tardesOK = p.esJefe || (tardes >= 6 && tardes <= 9);
-                const diasOK = totalTrabajados >= 19 && totalTrabajados <= 23;
-                const domingosOK = domingosLibres >= 2;
-                const nochesOK = turnosNocheUnicos <= 1;
-                
-                stats += `
-                    <div class="stat-item">
-                        <div class="stat-title">${p.nombre}${p.esJefe ? ' <span class="jefe-badge">JEFE</span>' : ''}</div>
-                        <div class="stat-value ${diasOK ? 'success' : 'warning'}">${totalTrabajados} días</div>
-                        <div style="font-size: 12px; margin-top: 5px;">
-                            Días: ${dias} | Tardes: <span class="${tardesOK ? 'success' : 'warning'}">${tardes}</span><br>
-                            Noches: NS=${nochesSem} días, NF=${nochesFinde} días<br>
-                            <span class="${nochesOK ? 'success' : 'warning'}">Turnos Noche: ${turnosNocheUnicos}</span><br>
-                            Domingos libres: <span class="${domingosOK ? 'success' : 'warning'}">${domingosLibres}</span>
-                        </div>
-                    </div>
-                `;
             });
+
+            // 3. Asignar Noches (Prioridad)
+            // Nota: El algoritmo debe saltar celdas que ya tienen valor (!= null)
+            asignarNoches(m, a, totalDias);
+
+            // 4. Rellenar Días y Tardes
+            personal.forEach(p => {
+                rellenarResto(p, totalDias);
+            });
+
+            renderizar();
+        }
+
+        function asignarNoches(mes, anio, diasTotal) {
+            // Lógica simplificada de noches: Intenta poner NS (Lun-Jue) y NF (Vie-Dom)
+            // verificando que los días estén disponibles (null).
             
-            document.getElementById('estadisticas').innerHTML = stats;
+            let candidatos = personal.filter(p => !p.esJefe).sort(() => Math.random() - 0.5);
+            
+            for (let i = 0; i < diasTotal; i++) {
+                const fecha = new Date(anio, mes, i + 1);
+                const diaSem = fecha.getDay(); // 0 Dom, 1 Lun, ...
+
+                // Detectar inicio Noche Semana (Lunes = 1)
+                if (diaSem === 1 && (i + 3) < diasTotal) {
+                    // Buscamos un candidato disponible para Lun, Mar, Mie, Jue
+                    for (let p of candidatos) {
+                        if (estaLibreRango(p.nombre, i, 4)) {
+                            // Asignar
+                            [0,1,2,3].forEach(offset => calendario[p.nombre][i+offset] = 'NS');
+                            // Asignar libres post turno (ej. 2 días)
+                            if (i+4 < diasTotal && !esFijo(p.nombre, i+4)) calendario[p.nombre][i+4] = 'L';
+                            if (i+5 < diasTotal && !esFijo(p.nombre, i+5)) calendario[p.nombre][i+5] = 'L';
+                            break; // Solo 1 persona por turno noche (ejemplo)
+                        }
+                    }
+                }
+
+                // Detectar inicio Noche Finde (Viernes = 5)
+                if (diaSem === 5 && (i + 2) < diasTotal) {
+                    for (let p of candidatos) {
+                        if (estaLibreRango(p.nombre, i, 3)) {
+                            [0,1,2].forEach(offset => calendario[p.nombre][i+offset] = 'NF');
+                            // Libres post turno
+                            if (i+3 < diasTotal && !esFijo(p.nombre, i+3)) calendario[p.nombre][i+3] = 'L';
+                            if (i+4 < diasTotal && !esFijo(p.nombre, i+4)) calendario[p.nombre][i+4] = 'L';
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
-        function guardarEstado() {
+        function rellenarResto(persona, totalDias) {
+            let diasConsecutivos = 0;
+
+            for (let i = 0; i < totalDias; i++) {
+                // Si ya tiene turno (fijo o asignado por noche), saltar
+                if (calendario[persona.nombre][i] !== null) {
+                    if (calendario[persona.nombre][i] === 'L') diasConsecutivos = 0;
+                    else diasConsecutivos++;
+                    continue;
+                }
+
+                // Regla básica de descanso: max 6 días
+                if (diasConsecutivos >= 6) {
+                    calendario[persona.nombre][i] = 'L';
+                    diasConsecutivos = 0;
+                    continue;
+                }
+
+                // Aleatorio Día o Tarde
+                // Jefes prefieren día, despachadores mixto
+                const rand = Math.random();
+                let turno = 'D';
+                
+                if (persona.esJefe) {
+                    turno = rand > 0.8 ? 'T' : 'D'; // Jefes mayormente día
+                } else {
+                    turno = rand > 0.5 ? 'T' : 'D';
+                }
+
+                calendario[persona.nombre][i] = turno;
+                diasConsecutivos++;
+            }
+        }
+
+        // Helpers Lógica
+        function estaLibreRango(nombre, inicio, longitud) {
+            for (let k = 0; k < longitud; k++) {
+                if (calendario[nombre][inicio + k] !== null) return false;
+            }
+            return true;
+        }
+
+        function esFijo(nombre, diaIndex) {
+            return diasBloqueados[nombre][diaIndex] !== undefined;
+        }
+
+        // === UTILIDADES ===
+        function actualizarEstadisticas() {
+            const statsDiv = document.getElementById('stats');
+            const totalDias = getDiasMes();
+            // Calcular cobertura por día
+            let html = '<h3>Cobertura Diaria</h3><div style="display:flex; gap:5px; flex-wrap:wrap; font-size:11px;">';
+            
+            for(let i=0; i<totalDias; i++) {
+                let d=0, t=0, n=0;
+                personal.forEach(p => {
+                    const val = calendario[p.nombre][i];
+                    if(val === 'D') d++;
+                    if(val === 'T') t++;
+                    if(val === 'NS' || val === 'NF') n++;
+                });
+                
+                // Alerta visual si falta gente (ejemplo: menos de 2 en dia)
+                let color = (d < 2 || t < 1) ? '#ffcccb' : '#c3e6cb';
+                html += `<div style="background:${color}; padding:2px 5px; border:1px solid #999;">Día ${i+1}: D${d}/T${t}/N${n}</div>`;
+            }
+            html += '</div>';
+            statsDiv.innerHTML = html;
+        }
+
+        function guardarLocal() {
             const estado = {
-                calendario: calendario,
-                diasFijos: diasFijos,
                 mes: document.getElementById('mes').value,
-                anio: document.getElementById('anio').value
+                anio: document.getElementById('anio').value,
+                calendario: calendario,
+                bloqueos: diasBloqueados
             };
-            localStorage.setItem('turnosGuardados', JSON.stringify(estado));
-            alert('✅ Estado guardado correctamente');
+            localStorage.setItem('turnos_data', JSON.stringify(estado));
+            alert('Guardado correctamente');
         }
 
-        function cargarEstado() {
-            const estado = JSON.parse(localStorage.getItem('turnosGuardados'));
-            if (estado) {
-                calendario = estado.calendario;
-                diasFijos = estado.diasFijos;
+        function cargarLocal() {
+            const data = localStorage.getItem('turnos_data');
+            if(data) {
+                const estado = JSON.parse(data);
                 document.getElementById('mes').value = estado.mes;
                 document.getElementById('anio').value = estado.anio;
-                generarEncabezado();
-                renderizarCalendario();
-                mostrarEstadisticas();
-                alert('✅ Estado cargado correctamente');
+                calendario = estado.calendario;
+                diasBloqueados = estado.bloqueos || {};
+                renderizar();
             } else {
-                alert('❌ No hay estado guardado');
+                alert('No hay datos guardados');
             }
         }
 
-        function exportarExcel() {
-            let csv = 'Nombre,';
-            const mes = parseInt(document.getElementById('mes').value);
-            const anio = parseInt(document.getElementById('anio').value);
-            const diasEnMes = new Date(anio, mes + 1, 0).getDate();
-            
-            const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-            
-            for (let i = 1; i <= diasEnMes; i++) {
-                const fecha = new Date(anio, mes, i - 1);
-                const diaSemana = diasSemana[fecha.getDay()];
-                csv += `${i} (${diaSemana}),`;
-            }
-            csv += 'Total Días,Turnos Noche\n';
-            
+        function exportarCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Nombre,";
+            const dias = getDiasMes();
+            for(let i=1; i<=dias; i++) csvContent += i + ",";
+            csvContent += "\n";
+
             personal.forEach(p => {
-                csv += `${p.nombre}${p.esJefe ? ' (JEFE)' : ''},`;
-                let total = 0;
-                let turnosNocheUnicos = 0;
-                let enBloqueNS = false;
-                let enBloqueNF = false;
-                
-                for (let dia = 0; dia < diasEnMes; dia++) {
-                    const turno = calendario[p.nombre][dia] || '-';
-                    csv += `${turno},`;
-                    if (turno !== 'L' && turno !== '-') total++;
-                    
-                    if (turno === 'NS' && !enBloqueNS) {
-                        turnosNocheUnicos++;
-                        enBloqueNS = true;
-                    } else if (turno !== 'NS') {
-                        enBloqueNS = false;
-                    }
-                    
-                    if (turno === 'NF' && !enBloqueNF) {
-                        turnosNocheUnicos++;
-                        enBloqueNF = true;
-                    } else if (turno !== 'NF') {
-                        enBloqueNF = false;
-                    }
+                let row = p.nombre + ",";
+                for(let i=0; i<dias; i++) {
+                    row += (calendario[p.nombre][i] || "") + ",";
                 }
-                csv += `${total},${turnosNocheUnicos}\n`;
+                csvContent += row + "\n";
             });
-            
-            // Agregar resumen por día
-            csv += '\n\nRESUMEN POR DÍA\n';
-            csv += 'Día,Día (D),Tarde (T),Noche Sem (NS),Noche Finde (NF),Jefes Día,Jefes Tarde\n';
-            
-            for (let dia = 0; dia < diasEnMes; dia++) {
-                let contadores = { D: 0, T: 0, NS: 0, NF: 0 };
-                let jefesD = 0, jefesT = 0;
-                
-                personal.forEach(p => {
-                    const turno = calendario[p.nombre][dia];
-                    if (turno && turno !== 'L') {
-                        contadores[turno] = (contadores[turno] || 0) + 1;
-                        if (p.esJefe) {
-                            if (turno === 'D') jefesD++;
-                            if (turno === 'T') jefesT++;
-                        }
-                    }
-                });
-                
-                const fecha = new Date(anio, mes, dia);
-                const diaSemana = diasSemana[fecha.getDay()];
-                
-                csv += `${dia + 1} (${diaSemana}),${contadores.D},${contadores.T},${contadores.NS},${contadores.NF},${jefesD},${jefesT}\n`;
-            }
-            
-            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            link.setAttribute('href', url);
-            link.setAttribute('download', `turnos_${anio}_${mes + 1}.csv`);
-            link.style.visibility = 'hidden';
+
+            var encodedUri = encodeURI(csvContent);
+            var link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "turnos.csv");
             document.body.appendChild(link);
             link.click();
-            document.body.removeChild(link);
-            
-            alert('✅ Archivo CSV exportado. Ábrelo con Excel para ver el calendario completo y el resumen.');
         }
-
-        // Inicialización
-        window.onload = function() {
-            const mesActual = new Date().getMonth();
-            document.getElementById('mes').value = mesActual;
-            generarEncabezado();
-            inicializarCalendario();
-            renderizarCalendario();
-        };
     </script>
 </body>
 </html>
